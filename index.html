@@ -31,8 +31,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .tab-btn{background:transparent;border:none;color:var(--text-f);padding:10px 18px;border-radius:6px;cursor:pointer;font-size:.875rem;font-weight:500;transition:all .15s;white-space:nowrap}
 .tab-btn.active{background:#1E40AF;color:white}
 .tab-btn:hover:not(.active){background:rgba(255,255,255,.08);color:#CBD5E1}
-.theme-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:#CBD5E1;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .15s;flex-shrink:0;white-space:nowrap;letter-spacing:.02em}
-.theme-btn:hover{background:rgba(255,255,255,.12);color:white}
+.header-actions{display:flex;gap:12px;align-items:center;flex-shrink:0}
+.theme-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.25);color:#F8FAFC;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;transition:all .2s;flex-shrink:0;white-space:nowrap;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.theme-btn:hover{background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.4)}
 
 /* ── Layout ─────────────────────────────── */
 main{max-width:100%;padding:24px 28px}
@@ -148,6 +149,15 @@ footer a:hover{text-decoration:underline}
 .error-box code{background:#FEE2E2;padding:2px 6px;border-radius:4px;font-family:monospace}
 
 /* ── Mobile card view ──────────────────── */
+.party-cards-wrap{display:none}
+.party-mob-card{background:var(--surface);border-radius:10px;margin-bottom:10px;padding:12px 14px;border:1px solid var(--border)}
+.party-mob-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.party-mob-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;background:var(--card);border-radius:8px;padding:8px;box-shadow:0 1px 2px var(--shadow);border:1px solid var(--surface)}
+.party-mob-cell{display:flex;flex-direction:column}
+.party-mob-lbl{font-size:.65rem;color:var(--text-f);font-weight:600;text-transform:uppercase;margin-bottom:2px}
+.party-mob-val{font-size:.9rem;font-weight:700;color:var(--text)}
+.party-mob-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border)}
+
 .const-cards-wrap{display:none}
 .mob-card{background:var(--card);border-radius:10px;margin-bottom:10px;padding:12px 14px;box-shadow:0 1px 3px var(--shadow)}
 .mob-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -166,18 +176,23 @@ footer a:hover{text-decoration:underline}
 .mob-pct{font-size:.78rem;font-weight:600;flex-shrink:0;margin-left:4px}
 
 /* ── Responsive ─────────────────────────── */
+.hide-desktop{display:none}
 @media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.detail-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){
-  .site-header{flex-direction:column;padding:12px 16px;gap:8px}
+  .site-header{flex-direction:column;padding:16px;gap:12px}
   .tabs{width:100%;justify-content:center}
+  .header-actions{width:100%;justify-content:center;gap:16px}
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .swing-number{font-size:3rem}
   .detail-grid{grid-template-columns:1fr 1fr}
+  .party-table-wrap{display:none}
+  .party-cards-wrap{display:block}
   .const-table-wrap{display:none}
   .const-cards-wrap{display:block}
   .swing-filters{flex-direction:column;align-items:center}
   .sf-group select{min-width:0;width:100%;max-width:340px}
-  .flip-table .hide-mob{display:none}
+  .hide-desktop{display:block}
+  .hide-mob{display:none}
 }
 </style>
 </head>
@@ -193,8 +208,10 @@ footer a:hover{text-decoration:underline}
     <button class="tab-btn" onclick="switchTab('constituencies',this)">Constituencies</button>
     <button class="tab-btn" onclick="switchTab('swing',this)">Swing Simulator</button>
   </nav>
-  <button class="theme-btn" id="alliance-btn" onclick="toggleAlliance()">⊞ Alliance</button>
-  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀ Light</button>
+  <div class="header-actions">
+    <button class="theme-btn" id="alliance-btn" onclick="toggleAlliance()">⊞ Alliance</button>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀ Light</button>
+  </div>
 </header>
 
 <main>
@@ -231,7 +248,7 @@ footer a:hover{text-decoration:underline}
 
   <div class="card">
     <div class="section-title">Party Performance</div>
-    <div style="overflow-x:auto">
+    <div class="party-table-wrap" style="overflow-x:auto">
       <table class="party-table">
         <thead>
           <tr>
@@ -247,6 +264,7 @@ footer a:hover{text-decoration:underline}
         <tbody id="party-tbody"></tbody>
       </table>
     </div>
+    <div class="party-cards-wrap" id="party-cards"></div>
   </div>
 </div>
 
@@ -258,6 +276,14 @@ footer a:hover{text-decoration:underline}
              placeholder="Search constituency, candidate, or party…" oninput="filterConst()">
       <select class="filter-select" id="party-filter" onchange="filterConst()">
         <option value="">All winning parties</option>
+      </select>
+      <select class="filter-select hide-desktop" id="mob-sort" onchange="handleMobSort(this.value)">
+        <option value="const_no:1">Sort by: Const # (asc)</option>
+        <option value="const_no:-1">Sort by: Const # (desc)</option>
+        <option value="margin:1">Sort by: Margin (asc)</option>
+        <option value="margin:-1">Sort by: Margin (desc)</option>
+        <option value="swing_pct:1">Sort by: Swing (asc)</option>
+        <option value="swing_pct:-1">Sort by: Swing (desc)</option>
       </select>
       <span id="const-count" style="font-size:.8rem;color:#64748B;white-space:nowrap"></span>
     </div>
@@ -604,6 +630,30 @@ function renderOverview() {
         ${p.vote_pct}%
       </td>
     </tr>`).join('');
+
+  const partyCards = document.getElementById('party-cards');
+  if (partyCards) {
+    partyCards.innerHTML = notable.map(p => `
+      <div class="party-mob-card">
+        <div class="party-mob-header">
+          <div><span class="badge" style="background:${p.color}">${p.short}</span> <span style="font-size:.85rem;color:#475569;margin-left:4px;font-weight:600">${p.party}</span></div>
+        </div>
+        <div class="party-mob-grid">
+          <div class="party-mob-cell"><span class="party-mob-lbl">1st</span><span class="party-mob-val" style="color:${p.color}">${p.seats_won}</span></div>
+          <div class="party-mob-cell"><span class="party-mob-lbl">2nd</span><span class="party-mob-val">${p.seats_2nd}</span></div>
+          <div class="party-mob-cell"><span class="party-mob-lbl">3rd</span><span class="party-mob-val">${p.seats_3rd}</span></div>
+          <div class="party-mob-cell"><span class="party-mob-lbl">4th</span><span class="party-mob-val">${p.seats_4th}</span></div>
+        </div>
+        <div class="party-mob-footer">
+          <div><span style="color:var(--text-f);font-size:.7rem;text-transform:uppercase;font-weight:600;letter-spacing:.05em">Votes</span> <span style="font-weight:700;color:var(--text);font-size:.85rem;margin-left:4px">${fmt(p.total_votes)}</span></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div class="vote-bar-bg" style="width:60px;margin:0"><div class="vote-bar-fg" style="width:${(p.vote_pct/maxVP*100).toFixed(1)}%;background:${p.color}"></div></div>
+            <strong style="color:var(--text);font-size:.85rem">${p.vote_pct}%</strong>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -633,19 +683,36 @@ function initConstituencies() {
 
 let sortCol = 'const_no', sortDir = 1;
 
+function handleMobSort(val) {
+  const parts = val.split(':');
+  setSortInternal(parts[0], parseInt(parts[1]));
+}
+
 function setSort(col) {
-  if (sortCol === col) { sortDir *= -1; }
-  else { sortCol = col; sortDir = 1; }
+  let newDir = (sortCol === col) ? sortDir * -1 : 1;
+  setSortInternal(col, newDir);
+}
+
+function setSortInternal(col, dir) {
+  sortCol = col;
+  sortDir = dir;
   document.querySelectorAll('.data-table th').forEach(th => {
     th.classList.remove('sort-active');
     const icon = th.querySelector('.sort-icon');
     if (icon) icon.textContent = '↕';
   });
-  const active = document.getElementById('th-' + col);
+  const active = document.getElementById('th-' + sortCol);
   if (active) {
     active.classList.add('sort-active');
     const icon = active.querySelector('.sort-icon');
     if (icon) icon.textContent = sortDir === 1 ? '↑' : '↓';
+  }
+  const mobSel = document.getElementById('mob-sort');
+  if (mobSel) {
+    const v = sortCol + ':' + sortDir;
+    for (let i = 0; i < mobSel.options.length; i++) {
+      if (mobSel.options[i].value === v) mobSel.value = v;
+    }
   }
   renderConst();
 }
