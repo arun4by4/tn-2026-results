@@ -84,12 +84,24 @@ Pure static HTML/CSS/JS — works on GitHub Pages with no build step.
 - Preference saved to `localStorage` key `tn-theme`
 - Chart.js axis/grid/legend colours updated in `applyChartTheme(isDark)` on every toggle and on initial load
 
+**Alliance view:**
+- Toggles via **"⊞ Alliance / ⊞ Parties"** button in the header; preference saved to `localStorage` key `tn-alliance`
+- Collapses parties into 5 alliances: **TVK** (TVK alone), **DMK+** (DMK, INC, VCK, CPI(M), CPI, IUML, DMDK), **ADMK+** (AIADMK, BJP, PMK, AMMK), **NTK** (NTK alone), **Others**
+- Affects all three tabs simultaneously: Overview charts/table aggregate by alliance; Constituencies filter dropdown and all party badges switch to alliance labels/colours; Swing Simulator from/to dropdowns and seat-change chips show alliances
+- `ALLIANCE_MAP`, `ALLIANCE_COLORS`, `ALLIANCE_ORDER` constants in `index.html`; `resolveShort(party, short)` and `resolveColor(party, color)` helpers return alliance or party values based on `allianceMode`
+- `getDisplayPartyData()` aggregates `partyData` by alliance when active; `projCount(item)` in `onSwing()` sums party-level projected counts per alliance
+
 **Swing model**: a seat flips when `swing_pct <= slider value`. `swing_pct = (margin/2) / total_votes × 100`. The "from/to" dropdowns filter by winner_party and runner_party respectively.
 
+**GitHub Actions deployment** (`.github/workflows/deploy.yml`):
+- Triggers on push to `main` or manual `workflow_dispatch`
+- Manual trigger has a `refetch` boolean: if true, runs all three Python scripts (full re-scrape, ~5 min); if false (default), only runs `convert_to_json.py` from committed CSVs
+- Deploys via `actions/deploy-pages@v4` — Pages source must be set to **GitHub Actions** in repo settings (Settings → Pages → Source: GitHub Actions)
+
 **To deploy to GitHub Pages:**
-1. Run all three Python scripts to generate CSVs and then JSON
-2. Commit everything including the `data/` folder (`venv/` is gitignored)
-3. Push to GitHub; enable Pages (Settings → Pages → Branch: main, folder: / root)
+1. Enable Pages: Settings → Pages → Source: **GitHub Actions**
+2. Commit everything including `data/` and CSVs (`venv/` is gitignored)
+3. Push to `main` — the workflow runs automatically
 4. Site available at `https://<user>.github.io/<repo>/`
 
 **To preview locally** (`fetch()` requires HTTP, not `file://`):

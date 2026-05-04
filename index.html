@@ -193,6 +193,7 @@ footer a:hover{text-decoration:underline}
     <button class="tab-btn" onclick="switchTab('constituencies',this)">Constituencies</button>
     <button class="tab-btn" onclick="switchTab('swing',this)">Swing Simulator</button>
   </nav>
+  <button class="theme-btn" id="alliance-btn" onclick="toggleAlliance()">⊞ Alliance</button>
   <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀ Light</button>
 </header>
 
@@ -390,14 +391,77 @@ footer a:hover{text-decoration:underline}
 // ══════════════════════════════════════════════
 let partyData = [], top4Data = [], swingsData = [];
 let filteredTop4 = [];
-let swingChart = null;
-let openRow = null;   // currently expanded constituency row id
+let swingChart = null, seatsChart = null, votesChart = null;
+let openRow = null;
+let allianceMode = false;
+
+// ══════════════════════════════════════════════
+// Alliance definitions
+// ══════════════════════════════════════════════
+const ALLIANCE_MAP = {
+  'Dravida Munnetra Kazhagam':                'DMK+',
+  'Indian National Congress':                 'DMK+',
+  'Viduthalai Chiruthaigal Katchi':           'DMK+',
+  'Communist Party of India (Marxist)':       'DMK+',
+  'Communist Party of India':                 'DMK+',
+  'Indian Union Muslim League':               'DMK+',
+  'Desiya Murpokku Dravida Kazhagam':         'DMK+',
+  'Tamilaga Vettri Kazhagam':                 'TVK',
+  'All India Anna Dravida Munnetra Kazhagam': 'ADMK+',
+  'Bharatiya Janata Party':                   'ADMK+',
+  'Pattali Makkal Katchi':                    'ADMK+',
+  'Amma Makkal Munnettra Kazagam':            'ADMK+',
+  'Naam Tamilar Katchi':                      'NTK',
+};
+const ALLIANCE_COLORS = {
+  'DMK+':   '#F43F5E',
+  'TVK':    '#F59E0B',
+  'ADMK+':  '#22C55E',
+  'NTK':    '#8B5CF6',
+  'Others': '#94A3B8',
+};
+const ALLIANCE_ORDER = ['TVK', 'DMK+', 'ADMK+', 'NTK', 'Others'];
 
 // ══════════════════════════════════════════════
 // Helpers
 // ══════════════════════════════════════════════
 const fmt  = n => (n == null ? '—' : Number(n).toLocaleString('en-IN'));
 const fmtP = v => (v == null ? '—' : v.toFixed(2) + '%');
+
+function getAlliance(party) {
+  return ALLIANCE_MAP[party] || 'Others';
+}
+
+function resolveShort(party, short) {
+  return allianceMode ? getAlliance(party) : (short || party);
+}
+
+function resolveColor(party, color) {
+  return allianceMode ? (ALLIANCE_COLORS[getAlliance(party)] || '#94A3B8') : (color || '#94A3B8');
+}
+
+function getDisplayPartyData() {
+  if (!allianceMode) return partyData;
+  const map = {};
+  for (const p of partyData) {
+    const a = getAlliance(p.party);
+    if (!map[a]) map[a] = {
+      party: a, short: a, color: ALLIANCE_COLORS[a] || '#94A3B8',
+      seats_won: 0, seats_2nd: 0, seats_3rd: 0, seats_4th: 0,
+      total_votes: 0, vote_pct: 0,
+    };
+    map[a].seats_won   += p.seats_won;
+    map[a].seats_2nd   += p.seats_2nd;
+    map[a].seats_3rd   += p.seats_3rd;
+    map[a].seats_4th   += p.seats_4th;
+    map[a].total_votes += p.total_votes;
+    map[a].vote_pct    += p.vote_pct;
+  }
+  return ALLIANCE_ORDER
+    .filter(a => map[a])
+    .map(a => ({ ...map[a], vote_pct: +map[a].vote_pct.toFixed(2) }))
+    .sort((a, b) => b.seats_won - a.seats_won);
+}
 
 function badge(party, color, short) {
   return `<span class="badge" style="background:${color || '#94A3B8'}">${short || party}</span>`;
@@ -443,7 +507,8 @@ async function loadAll() {
 // Overview
 // ══════════════════════════════════════════════
 function renderOverview() {
-  const winner = partyData[0];
+  const displayData = getDisplayPartyData();
+  const winner = displayData[0];
   document.getElementById('m-winner').innerHTML = `
     <div class="metric-label">Biggest Winner</div>
     <div class="metric-value" style="color:${winner.color}">${winner.seats_won}</div>
@@ -461,9 +526,11 @@ function renderOverview() {
     <div class="metric-value" style="font-size:1.8rem">${(totalVotes / 1e6).toFixed(2)}M</div>
     <div class="metric-sub">Across 234 constituencies</div>`;
 
-  // Seats bar chart
-  const seatsParties = partyData.filter(p => p.seats_won > 0 || p.vote_pct >= 3);
-  new Chart(document.getElementById('chart-seats'), {
+  if (seatsChart) { seatsChart.destroy(); seatsChart = null; }
+  if (votesChart) { votesChart.destroy(); votesChart = null; }
+
+  const seatsParties = displayData.filter(p => p.seats_won > 0);
+  seatsChart = new Chart(document.getElementById('chart-seats'), {
     type: 'bar',
     data: {
       labels: seatsParties.map(p => p.short),
@@ -490,19 +557,19 @@ function renderOverview() {
     }
   });
 
-  // Vote share donut
-  const voteParties = partyData.filter(p => p.vote_pct >= 1 && p.party !== 'None of the Above');
-  const otherPct = +(partyData
-    .filter(p => p.vote_pct < 1 && p.party !== 'None of the Above')
+  const voteMinPct = allianceMode ? 2 : 1;
+  const voteParties = displayData.filter(p => p.vote_pct >= voteMinPct && p.party !== 'None of the Above');
+  const otherPct = +(displayData
+    .filter(p => p.vote_pct < voteMinPct && p.party !== 'None of the Above')
     .reduce((s, p) => s + p.vote_pct, 0)).toFixed(2);
 
-  new Chart(document.getElementById('chart-votes'), {
+  votesChart = new Chart(document.getElementById('chart-votes'), {
     type: 'doughnut',
     data: {
-      labels: [...voteParties.map(p => p.short), 'Others'],
+      labels: [...voteParties.map(p => p.short), ...(otherPct > 0 ? ['Others'] : [])],
       datasets: [{
-        data: [...voteParties.map(p => p.vote_pct), otherPct],
-        backgroundColor: [...voteParties.map(p => p.color), '#CBD5E1'],
+        data: [...voteParties.map(p => p.vote_pct), ...(otherPct > 0 ? [otherPct] : [])],
+        backgroundColor: [...voteParties.map(p => p.color), ...(otherPct > 0 ? ['#CBD5E1'] : [])],
         borderWidth: 2, borderColor: 'white',
       }]
     },
@@ -519,8 +586,7 @@ function renderOverview() {
     }
   });
 
-  // Party performance table
-  const notable = partyData.filter(p => p.seats_won > 0 || p.seats_2nd > 0 || p.vote_pct >= 1);
+  const notable = displayData.filter(p => p.seats_won > 0 || p.seats_2nd > 0 || p.vote_pct >= voteMinPct);
   const maxVP = Math.max(...notable.map(p => p.vote_pct));
   document.getElementById('party-tbody').innerHTML = notable.map(p => `
     <tr>
@@ -544,23 +610,32 @@ function renderOverview() {
 // Constituencies
 // ══════════════════════════════════════════════
 function initConstituencies() {
-  const parties = [...new Set(top4Data.map(r => r.p1_party).filter(Boolean))].sort();
   const sel = document.getElementById('party-filter');
-  parties.forEach(p => {
-    const o = document.createElement('option');
-    o.value = p;
-    o.textContent = (partyData.find(x => x.party === p) || {}).short || p;
-    sel.appendChild(o);
-  });
+  while (sel.options.length > 1) sel.remove(1);
+  sel.value = '';
+
+  if (allianceMode) {
+    ALLIANCE_ORDER.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a; o.textContent = a;
+      sel.appendChild(o);
+    });
+  } else {
+    const parties = [...new Set(top4Data.map(r => r.p1_party).filter(Boolean))].sort();
+    parties.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = (partyData.find(x => x.party === p) || {}).short || p;
+      sel.appendChild(o);
+    });
+  }
   renderConst();
 }
 
-let sortCol = 'const_no', sortDir = 1;  // 1 = asc, -1 = desc
+let sortCol = 'const_no', sortDir = 1;
 
 function setSort(col) {
   if (sortCol === col) { sortDir *= -1; }
   else { sortCol = col; sortDir = 1; }
-  // Update header indicators
   document.querySelectorAll('.data-table th').forEach(th => {
     th.classList.remove('sort-active');
     const icon = th.querySelector('.sort-icon');
@@ -582,7 +657,10 @@ function renderConst() {
   const pf = document.getElementById('party-filter').value;
 
   let data = top4Data.filter(r => {
-    if (pf && r.p1_party !== pf) return false;
+    if (pf) {
+      const match = allianceMode ? getAlliance(r.p1_party) === pf : r.p1_party === pf;
+      if (!match) return false;
+    }
     if (q) {
       const h = [r.constituency, r.p1_candidate, r.p2_candidate, r.p3_candidate, r.p4_candidate,
                  r.p1_party, r.p2_party, r.p3_party, r.p4_party,
@@ -595,16 +673,16 @@ function renderConst() {
   const strCols = new Set(['name','p1_candidate','p2_candidate','p1_party','p2_party','p3_party','p4_party']);
   data.sort((a, b) => {
     let av, bv;
-    if (sortCol === 'name')         { av = a.constituency;   bv = b.constituency; }
-    else if (sortCol === 'p1_candidate') { av = a.p1_candidate || ''; bv = b.p1_candidate || ''; }
-    else if (sortCol === 'p2_candidate') { av = a.p2_candidate || ''; bv = b.p2_candidate || ''; }
-    else if (sortCol === 'p1_party')     { av = a.p1_party || '';     bv = b.p1_party || ''; }
-    else if (sortCol === 'p2_party')     { av = a.p2_party || '';     bv = b.p2_party || ''; }
-    else if (sortCol === 'p3_party')     { av = a.p3_party || '';     bv = b.p3_party || ''; }
-    else if (sortCol === 'p4_party')     { av = a.p4_party || '';     bv = b.p4_party || ''; }
-    else if (sortCol === 'margin')       { av = a.margin || 1e9;      bv = b.margin || 1e9; }
-    else if (sortCol === 'swing_pct')    { av = a.swing_pct ?? 999;   bv = b.swing_pct ?? 999; }
-    else                                 { av = a.const_no;           bv = b.const_no; }
+    if (sortCol === 'name')              { av = a.constituency;        bv = b.constituency; }
+    else if (sortCol === 'p1_candidate') { av = a.p1_candidate || '';  bv = b.p1_candidate || ''; }
+    else if (sortCol === 'p2_candidate') { av = a.p2_candidate || '';  bv = b.p2_candidate || ''; }
+    else if (sortCol === 'p1_party')     { av = a.p1_party || '';      bv = b.p1_party || ''; }
+    else if (sortCol === 'p2_party')     { av = a.p2_party || '';      bv = b.p2_party || ''; }
+    else if (sortCol === 'p3_party')     { av = a.p3_party || '';      bv = b.p3_party || ''; }
+    else if (sortCol === 'p4_party')     { av = a.p4_party || '';      bv = b.p4_party || ''; }
+    else if (sortCol === 'margin')       { av = a.margin || 1e9;       bv = b.margin || 1e9; }
+    else if (sortCol === 'swing_pct')    { av = a.swing_pct ?? 999;    bv = b.swing_pct ?? 999; }
+    else                                 { av = a.const_no;            bv = b.const_no; }
     if (strCols.has(sortCol)) return sortDir * av.localeCompare(bv);
     return sortDir * (av - bv);
   });
@@ -622,18 +700,18 @@ function renderConst() {
         <span style="font-size:.8rem">${r.p1_candidate || '—'}</span>
         ${r.p1_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p1_pct.toFixed(1)}%</span>` : ''}
       </td>
-      <td>${badge(r.p1_party, r.p1_color, r.p1_short)}</td>
+      <td>${badge(r.p1_party, resolveColor(r.p1_party, r.p1_color), resolveShort(r.p1_party, r.p1_short))}</td>
       <td style="white-space:nowrap">
         <span style="font-size:.8rem;color:#64748B">${r.p2_candidate || '—'}</span>
         ${r.p2_pct != null ? `<span style="font-size:.72rem;color:#94A3B8;margin-left:4px">${r.p2_pct.toFixed(1)}%</span>` : ''}
       </td>
-      <td>${r.p2_party ? badge(r.p2_party, r.p2_color, r.p2_short) : '—'}</td>
+      <td>${r.p2_party ? badge(r.p2_party, resolveColor(r.p2_party, r.p2_color), resolveShort(r.p2_party, r.p2_short)) : '—'}</td>
       <td style="white-space:nowrap">
-        ${r.p3_party ? badge(r.p3_party, r.p3_color, r.p3_short) : '—'}
+        ${r.p3_party ? badge(r.p3_party, resolveColor(r.p3_party, r.p3_color), resolveShort(r.p3_party, r.p3_short)) : '—'}
         ${r.p3_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p3_pct.toFixed(1)}%</span>` : ''}
       </td>
       <td style="white-space:nowrap">
-        ${r.p4_party ? badge(r.p4_party, r.p4_color, r.p4_short) : '—'}
+        ${r.p4_party ? badge(r.p4_party, resolveColor(r.p4_party, r.p4_color), resolveShort(r.p4_party, r.p4_short)) : '—'}
         ${r.p4_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p4_pct.toFixed(1)}%</span>` : ''}
       </td>
       <td class="right" style="font-weight:600">${fmt(r.margin)}</td>
@@ -657,11 +735,13 @@ function renderConst() {
               const color = r[`p${p}_color`];
               const short = r[`p${p}_short`];
               const medals = ['1st','2nd','3rd','4th'];
+              const dColor = resolveColor(party, color);
+              const dShort = resolveShort(party, short);
               return `
-              <div class="cand-card" style="border-color:${color}">
+              <div class="cand-card" style="border-color:${dColor}">
                 <div class="cand-rank">${medals[p-1]} place</div>
                 <div class="cand-name">${cand}</div>
-                <div class="cand-party-label"><span class="badge" style="background:${color};font-size:.65rem">${short}</span> ${party}</div>
+                <div class="cand-party-label"><span class="badge" style="background:${dColor};font-size:.65rem">${dShort}</span> ${party}</div>
                 <div class="cand-votes">${fmt(votes)}</div>
                 <div class="cand-pct">${pct != null ? pct.toFixed(2) + '% of votes' : ''}</div>
               </div>`;
@@ -680,8 +760,8 @@ function renderConst() {
       const cand  = r[`p${p}_candidate`];
       const party = r[`p${p}_party`];
       if (!cand && !party) return '';
-      const color = r[`p${p}_color`] || '#94A3B8';
-      const short = r[`p${p}_short`] || party;
+      const color = resolveColor(party, r[`p${p}_color`]);
+      const short = resolveShort(party, r[`p${p}_short`]);
       const pct   = r[`p${p}_pct`];
       return `
       <div class="mob-cand">
@@ -710,7 +790,6 @@ function toggleConst(id) {
   const dr = document.getElementById('dr-' + id);
   const isOpen = dr.style.display !== 'none';
 
-  // Close previous
   if (openRow && openRow !== id) {
     const pm = document.getElementById('mr-' + openRow);
     const pd = document.getElementById('dr-' + openRow);
@@ -733,27 +812,39 @@ function toggleConst(id) {
 // Swing Simulator
 // ══════════════════════════════════════════════
 function initSwingSimulator() {
-  const winners  = [...new Set(swingsData.map(s => s.winner_party).filter(Boolean))].sort();
-  const runners  = [...new Set(swingsData.map(s => s.runner_party).filter(Boolean))].sort();
-
   const fromSel = document.getElementById('from-party');
   const toSel   = document.getElementById('to-party');
+  while (fromSel.options.length > 1) fromSel.remove(1);
+  while (toSel.options.length > 1)   toSel.remove(1);
+  fromSel.value = '';
+  toSel.value   = '';
 
-  winners.forEach(p => {
-    const o = document.createElement('option');
-    const pd = partyData.find(x => x.party === p);
-    o.value = p; o.textContent = pd ? pd.short : p;
-    fromSel.appendChild(o);
-  });
-  runners.forEach(p => {
-    const o = document.createElement('option');
-    const pd = partyData.find(x => x.party === p);
-    o.value = p; o.textContent = pd ? pd.short : p;
-    toSel.appendChild(o);
-  });
+  if (allianceMode) {
+    ALLIANCE_ORDER.forEach(a => {
+      const o1 = document.createElement('option'); o1.value = a; o1.textContent = a; fromSel.appendChild(o1);
+      const o2 = document.createElement('option'); o2.value = a; o2.textContent = a; toSel.appendChild(o2);
+    });
+  } else {
+    const winners = [...new Set(swingsData.map(s => s.winner_party).filter(Boolean))].sort();
+    const runners = [...new Set(swingsData.map(s => s.runner_party).filter(Boolean))].sort();
+    winners.forEach(p => {
+      const o = document.createElement('option');
+      const pd = partyData.find(x => x.party === p);
+      o.value = p; o.textContent = pd ? pd.short : p;
+      fromSel.appendChild(o);
+    });
+    runners.forEach(p => {
+      const o = document.createElement('option');
+      const pd = partyData.find(x => x.party === p);
+      o.value = p; o.textContent = pd ? pd.short : p;
+      toSel.appendChild(o);
+    });
+  }
 
-  // Build initial chart (all parties with seats won)
-  const seatParties = partyData.filter(p => p.seats_won > 0);
+  if (swingChart) { swingChart.destroy(); swingChart = null; }
+
+  const displayData = getDisplayPartyData();
+  const seatParties = displayData.filter(p => p.seats_won > 0);
   swingChart = new Chart(document.getElementById('chart-swing'), {
     type: 'bar',
     data: {
@@ -762,7 +853,7 @@ function initSwingSimulator() {
         {
           label: 'Current',
           data: seatParties.map(p => p.seats_won),
-          backgroundColor: 'rgba(148,163,184,0.18)',  // neutral slate, same for all
+          backgroundColor: 'rgba(148,163,184,0.18)',
           borderColor: 'rgba(148,163,184,0.55)',
           borderWidth: 2,
           borderRadius: 4,
@@ -792,7 +883,6 @@ function initSwingSimulator() {
     }
   });
 
-  // Annotate 118-seat majority line
   updateSliderTrack();
   onSwing();
 }
@@ -805,73 +895,88 @@ function updateSliderTrack() {
 
 function onSwing() {
   updateSliderTrack();
-  const swingPct  = parseFloat(document.getElementById('swing-slider').value);
-  const fromParty = document.getElementById('from-party').value;
-  const toParty   = document.getElementById('to-party').value;
+  const swingPct = parseFloat(document.getElementById('swing-slider').value);
+  const fromVal  = document.getElementById('from-party').value;
+  const toVal    = document.getElementById('to-party').value;
 
   document.getElementById('swing-display').innerHTML =
     swingPct.toFixed(1) + '<span class="pct">%</span>';
 
-  // Seats that flip
   const flipping = swingsData.filter(s => {
     if (s.swing_pct == null || s.swing_pct > swingPct) return false;
-    if (fromParty && s.winner_party !== fromParty) return false;
-    if (toParty   && s.runner_party !== toParty)   return false;
+    if (fromVal) {
+      const fw = allianceMode ? getAlliance(s.winner_party) : s.winner_party;
+      if (fw !== fromVal) return false;
+    }
+    if (toVal) {
+      const rw = allianceMode ? getAlliance(s.runner_party) : s.runner_party;
+      if (rw !== toVal) return false;
+    }
     return true;
   });
 
-  // New seat counts
-  const newCounts = {};
-  partyData.forEach(p => { newCounts[p.party] = p.seats_won; });
+  // Compute projected seat counts at party level, then aggregate for display
+  const newPartyCount = {};
+  partyData.forEach(p => { newPartyCount[p.party] = p.seats_won; });
   flipping.forEach(s => {
-    if (newCounts[s.winner_party] != null) newCounts[s.winner_party]--;
-    newCounts[s.runner_party] = (newCounts[s.runner_party] || 0) + 1;
+    if (newPartyCount[s.winner_party] != null) newPartyCount[s.winner_party]--;
+    newPartyCount[s.runner_party] = (newPartyCount[s.runner_party] || 0) + 1;
   });
 
-  // Summary bar
-  const gains  = {}, losses = {};
+  const displayData = getDisplayPartyData();
+
+  function projCount(item) {
+    if (!allianceMode) return newPartyCount[item.party] || 0;
+    return partyData
+      .filter(p => getAlliance(p.party) === item.party)
+      .reduce((s, p) => s + (newPartyCount[p.party] || 0), 0);
+  }
+
+  // Summary
+  const gains = {}, losses = {};
   flipping.forEach(s => {
-    losses[s.winner_party] = (losses[s.winner_party] || 0) + 1;
-    gains[s.runner_party]  = (gains[s.runner_party]  || 0) + 1;
+    const wp = allianceMode ? getAlliance(s.winner_party) : s.winner_party;
+    const rp = allianceMode ? getAlliance(s.runner_party) : s.runner_party;
+    losses[wp] = (losses[wp] || 0) + 1;
+    gains[rp]  = (gains[rp]  || 0) + 1;
   });
   document.getElementById('ss-flip').textContent = flipping.length;
 
   if (flipping.length > 0) {
-    const bg = Object.entries(gains).sort((a,b) => b[1]-a[1])[0];
+    const bg = Object.entries(gains).sort((a,b)  => b[1]-a[1])[0];
     const bl = Object.entries(losses).sort((a,b) => b[1]-a[1])[0];
-    const bgP = partyData.find(x => x.party === bg[0]);
-    const blP = partyData.find(x => x.party === bl[0]);
+    const bgColor = allianceMode ? (ALLIANCE_COLORS[bg[0]] || '#64748B') : (partyData.find(x => x.party === bg[0])?.color || '#64748B');
+    const blColor = allianceMode ? (ALLIANCE_COLORS[bl[0]] || '#64748B') : (partyData.find(x => x.party === bl[0])?.color || '#64748B');
+    const bgShort = allianceMode ? bg[0] : (partyData.find(x => x.party === bg[0])?.short || bg[0]);
+    const blShort = allianceMode ? bl[0] : (partyData.find(x => x.party === bl[0])?.short || bl[0]);
     document.getElementById('ss-gainer').innerHTML =
-      `<span style="color:${bgP?.color || '#64748B'}">${bgP?.short || bg[0]}</span> +${bg[1]}`;
+      `<span style="color:${bgColor}">${bgShort}</span> +${bg[1]}`;
     document.getElementById('ss-loser').innerHTML =
-      `<span style="color:${blP?.color || '#64748B'}">${blP?.short || bl[0]}</span> &minus;${bl[1]}`;
+      `<span style="color:${blColor}">${blShort}</span> &minus;${bl[1]}`;
   } else {
     document.getElementById('ss-gainer').textContent = '—';
     document.getElementById('ss-loser').textContent  = '—';
   }
 
   // Majority indicator
-  const majorityParty = partyData.filter(p => (newCounts[p.party] || 0) >= 118)[0];
-  if (majorityParty) {
-    const mp = partyData.find(x => x.party === majorityParty.party);
+  const majorityItem = displayData.find(p => projCount(p) >= 118);
+  if (majorityItem) {
     document.getElementById('ss-majority').innerHTML =
-      `<span style="color:${mp.color}">${mp.short}</span> (${newCounts[majorityParty.party]})`;
+      `<span style="color:${majorityItem.color}">${majorityItem.short}</span> (${projCount(majorityItem)})`;
   } else {
     document.getElementById('ss-majority').textContent = 'Hung';
   }
 
-  // Update chart
-  const seatParties = partyData.filter(p => p.seats_won > 0);
-  swingChart.data.datasets[1].data = seatParties.map(p => newCounts[p.party] || 0);
+  // Update chart projected bars only (labels/current bars are fixed at init)
+  const seatParties = displayData.filter(p => p.seats_won > 0);
+  swingChart.data.datasets[1].data = seatParties.map(p => projCount(p));
   swingChart.update('active');
 
   // Party changes grid
-  const allParties = partyData.filter(p =>
-    p.seats_won > 0 || (newCounts[p.party] != null && newCounts[p.party] > 0)
-  );
-  document.getElementById('party-changes').innerHTML = allParties.map(p => {
+  const allDisplay = displayData.filter(p => p.seats_won > 0 || projCount(p) > 0);
+  document.getElementById('party-changes').innerHTML = allDisplay.map(p => {
     const cur  = p.seats_won;
-    const proj = newCounts[p.party] || 0;
+    const proj = projCount(p);
     const d    = proj - cur;
     const dc   = d > 0 ? 'gain' : d < 0 ? 'loss' : 'same';
     const ds   = d > 0 ? `+${d}` : d < 0 ? `${d}` : '=';
@@ -900,10 +1005,10 @@ function onSwing() {
     document.getElementById('flip-tbody').innerHTML = flipping.map(s => `
       <tr>
         <td><strong>${s.constituency}</strong></td>
-        <td>${badge(s.winner_party, s.winner_color, s.winner_short)}
+        <td>${badge(s.winner_party, resolveColor(s.winner_party, s.winner_color), resolveShort(s.winner_party, s.winner_short))}
             <span style="font-size:.75rem;color:#64748B;margin-left:4px">${s.winner}</span></td>
         <td class="arrow-cell">&#8594;</td>
-        <td>${badge(s.runner_party, s.runner_color, s.runner_short)}
+        <td>${badge(s.runner_party, resolveColor(s.runner_party, s.runner_color), resolveShort(s.runner_party, s.runner_short))}
             <span style="font-size:.75rem;color:#64748B;margin-left:4px">${s.runner_up}</span></td>
         <td class="right" style="color:#64748B">${fmt(s.margin)}</td>
         <td class="right ${swingColorClass(s.swing_pct)}">${fmtP(s.swing_pct)}</td>
@@ -916,7 +1021,7 @@ function onSwing() {
 }
 
 // ══════════════════════════════════════════════
-// Theme
+// Theme & Alliance toggles
 // ══════════════════════════════════════════════
 function applyChartTheme(isDark) {
   Chart.defaults.color      = isDark ? '#64748B' : '#94A3B8';
@@ -943,12 +1048,25 @@ function toggleTheme() {
   applyChartTheme(isDark);
 }
 
-// Apply saved theme preference (default: dark)
-(function initTheme() {
-  const saved = localStorage.getItem('tn-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
-  document.getElementById('theme-btn').textContent = saved === 'dark' ? '☀ Light' : '☾ Dark';
-  applyChartTheme(saved === 'dark');
+function toggleAlliance() {
+  allianceMode = !allianceMode;
+  localStorage.setItem('tn-alliance', allianceMode ? '1' : '0');
+  document.getElementById('alliance-btn').textContent = allianceMode ? '⊞ Parties' : '⊞ Alliance';
+  renderOverview();
+  initConstituencies();
+  initSwingSimulator();
+  applyChartTheme(document.documentElement.getAttribute('data-theme') === 'dark');
+}
+
+// Apply saved preferences (runs before loadAll)
+(function initPrefs() {
+  const savedTheme = localStorage.getItem('tn-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('theme-btn').textContent = savedTheme === 'dark' ? '☀ Light' : '☾ Dark';
+  applyChartTheme(savedTheme === 'dark');
+
+  allianceMode = localStorage.getItem('tn-alliance') === '1';
+  document.getElementById('alliance-btn').textContent = allianceMode ? '⊞ Parties' : '⊞ Alliance';
 })();
 
 // ══════════════════════════════════════════════
