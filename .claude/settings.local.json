@@ -4,7 +4,14 @@
       "WebFetch(domain:results.eci.gov.in)",
       "Bash(python -m venv venv)",
       "Bash(venv/Scripts/pip install *)",
-      "Bash(venv/Scripts/python *)"
+      "Bash(venv/Scripts/python *)",
+      "Bash(python -m http.server 8765 --directory .)",
+      "Bash(curl -s http://localhost:8765/index.html)",
+      "Bash(curl -s http://localhost:8765/data/party_summary.json)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('party_summary OK,', len\\(d\\), 'parties'\\)\")",
+      "Bash(curl -s http://localhost:8765/data/top4.json)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('top4 OK,', len\\(d\\), 'rows'\\)\" kill %1)",
+      "Bash(python *)"
     ]
   }
 }

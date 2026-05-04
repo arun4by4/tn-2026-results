@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tamil Nadu 2026 Assembly Election Results</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<style>
+/* ── Theme variables ─────────────────────── */
+:root{
+  --bg:#F1F5F9;--card:#ffffff;--surface:#F8FAFC;--border:#E2E8F0;
+  --text:#1E293B;--text-m:#64748B;--text-f:#94A3B8;--text-dim:#475569;
+  --header:#0F172A;--shadow:rgba(0,0,0,.07);
+}
+[data-theme="dark"]{
+  --bg:#0F172A;--card:#1E293B;--surface:#243044;--border:#334155;
+  --text:#F1F5F9;--text-m:#94A3B8;--text-f:#64748B;--text-dim:#CBD5E1;
+  --header:#020617;--shadow:rgba(0,0,0,.4);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .2s,color .2s}
+
+/* ── Header ─────────────────────────────── */
+.site-header{background:var(--header);color:white;padding:0 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;gap:16px}
+.title-block{padding:14px 0;min-width:0}
+.title-block h1{font-size:1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.title-block .sub{font-size:.7rem;color:var(--text-f);margin-top:2px}
+.tabs{display:flex;gap:2px;flex-shrink:0}
+.tab-btn{background:transparent;border:none;color:var(--text-f);padding:10px 18px;border-radius:6px;cursor:pointer;font-size:.875rem;font-weight:500;transition:all .15s;white-space:nowrap}
+.tab-btn.active{background:#1E40AF;color:white}
+.tab-btn:hover:not(.active){background:rgba(255,255,255,.08);color:#CBD5E1}
+.theme-btn{background:transparent;border:1px solid rgba(255,255,255,.2);color:#CBD5E1;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:500;transition:all .15s;flex-shrink:0;white-space:nowrap;letter-spacing:.02em}
+.theme-btn:hover{background:rgba(255,255,255,.12);color:white}
+
+/* ── Layout ─────────────────────────────── */
+main{max-width:100%;padding:24px 28px}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── Cards ─────────────────────────────── */
+.card{background:var(--card);border-radius:12px;padding:20px;box-shadow:0 1px 3px var(--shadow),0 1px 2px var(--shadow);transition:background .2s}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+
+/* ── Metric ─────────────────────────────── */
+.metric-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-m);margin-bottom:8px}
+.metric-value{font-size:2.2rem;font-weight:800;line-height:1;letter-spacing:-.03em}
+.metric-sub{font-size:.78rem;color:var(--text-m);margin-top:6px}
+
+/* ── Utilities ─────────────────────────── */
+.right{text-align:right}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.72rem;font-weight:700;color:white;letter-spacing:.02em}
+.section-title{font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-m);margin-bottom:16px}
+.chart-wrap{position:relative;height:280px}
+.chart-wrap-md{position:relative;height:360px}
+.chart-wrap-lg{position:relative;height:440px}
+
+/* ── Party overview table ───────────────── */
+.party-table{width:100%;border-collapse:collapse}
+.party-table th{text-align:left;padding:8px 12px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-f);border-bottom:2px solid var(--surface)}
+.party-table th.right,.party-table td.right{text-align:right}
+.party-table td{padding:9px 12px;font-size:.85rem;border-bottom:1px solid var(--surface);vertical-align:middle;color:var(--text)}
+.party-table tr:hover td{background:var(--surface)}
+.vote-bar-bg{background:var(--surface);border-radius:3px;height:6px;overflow:hidden;width:90px;display:inline-block;vertical-align:middle;margin-right:6px}
+.vote-bar-fg{height:100%;border-radius:3px}
+
+/* ── Constituency table ─────────────────── */
+.controls-bar{display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+.search-input{flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:.875rem;outline:none;transition:border-color .15s,box-shadow .15s;background:var(--card);color:var(--text)}
+.search-input:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.filter-select{padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:.875rem;background:var(--card);color:var(--text);outline:none;cursor:pointer}
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;padding:10px 12px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-f);border-bottom:2px solid var(--surface);cursor:pointer;user-select:none}
+.data-table th:hover{color:var(--text-dim)}
+.data-table th.sort-active{color:#3B82F6}
+.sort-icon{margin-left:4px;opacity:.4;font-style:normal}
+.sort-active .sort-icon{opacity:1}
+.data-table td{padding:9px 12px;font-size:.82rem;border-bottom:1px solid var(--surface);vertical-align:middle;color:var(--text)}
+.data-table td.right{text-align:right}
+.data-table tr.main-row{cursor:pointer}
+.data-table tr.main-row:hover td{background:var(--surface)}
+.expand-icon{font-size:.6rem;color:var(--text-f);margin-right:5px;display:inline-block;transition:transform .2s}
+.main-row.open .expand-icon{transform:rotate(90deg)}
+.detail-row td{padding:0;background:var(--surface);border-bottom:2px solid var(--border)}
+.detail-content{padding:14px 20px 18px;border-left:3px solid #3B82F6;margin:0 0 0 12px}
+.detail-meta{font-size:.75rem;color:var(--text-m);margin-bottom:10px}
+.detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px}
+.cand-card{background:var(--card);border-radius:8px;padding:10px 12px;border-left:3px solid #ccc}
+.cand-rank{font-size:.65rem;color:var(--text-f);font-weight:600;text-transform:uppercase}
+.cand-name{font-size:.85rem;font-weight:600;margin:3px 0;color:var(--text)}
+.cand-party-label{font-size:.72rem;color:var(--text-m)}
+.cand-votes{font-size:.95rem;font-weight:700;margin-top:6px;color:var(--text)}
+.cand-pct{font-size:.72rem;color:var(--text-m)}
+
+/* ── Swing Simulator ───────────────────── */
+.swing-hero{text-align:center;padding:20px 20px 12px}
+.swing-number{font-size:4rem;font-weight:900;letter-spacing:-.04em;color:var(--text);line-height:1}
+.swing-number .pct{font-size:2rem;color:var(--text-m);font-weight:600}
+.swing-desc{font-size:.875rem;color:var(--text-m);margin-top:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;max-width:600px;height:6px;border-radius:3px;background:var(--border);outline:none;margin:16px 0 8px;cursor:pointer;display:block;margin-left:auto;margin-right:auto}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#3B82F6;cursor:pointer;box-shadow:0 2px 8px rgba(59,130,246,.4);transition:box-shadow .15s}
+input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 2px 14px rgba(59,130,246,.6)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#3B82F6;cursor:pointer;border:none;box-shadow:0 2px 8px rgba(59,130,246,.4)}
+.range-labels{display:flex;justify-content:space-between;max-width:600px;margin:0 auto;font-size:.72rem;color:var(--text-f)}
+.swing-filters{display:flex;gap:20px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+.sf-group{display:flex;flex-direction:column;gap:4px}
+.sf-group label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-f)}
+.sf-group select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.875rem;background:var(--card);color:var(--text);outline:none;min-width:220px}
+.swing-summary{background:var(--surface);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;gap:0;align-items:stretch;flex-wrap:wrap;border:1px solid var(--border)}
+.ss-stat{display:flex;flex-direction:column;align-items:center;flex:1;padding:0 20px}
+.ss-stat .n{font-size:1.75rem;font-weight:800;line-height:1}
+.ss-stat .l{font-size:.7rem;color:var(--text-m);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.ss-divider{width:1px;background:var(--border);align-self:stretch;flex-shrink:0}
+.party-change-grid{display:flex;flex-wrap:wrap;gap:8px}
+.pc-item{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--border)}
+.pc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.pc-info{display:flex;align-items:baseline;gap:4px}
+.pc-short{font-size:.8rem;font-weight:600}
+.pc-seats{font-size:1.1rem;font-weight:800}
+.pc-delta{font-size:.72rem;font-weight:700;padding:1px 6px;border-radius:4px}
+.pc-delta.gain{background:#DCFCE7;color:#15803D}
+.pc-delta.loss{background:#FEE2E2;color:#DC2626}
+.pc-delta.same{background:var(--surface);color:var(--text-f)}
+.flip-wrap{max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:12px}
+.flip-table{width:100%;border-collapse:collapse}
+.flip-table th{position:sticky;top:0;background:var(--card);text-align:left;padding:8px 12px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-f);border-bottom:2px solid var(--surface);z-index:1;white-space:nowrap}
+.flip-table td{padding:8px 12px;font-size:.8rem;border-bottom:1px solid var(--surface);vertical-align:middle;color:var(--text)}
+.flip-table td.right{text-align:right}
+.flip-table tr:hover td{background:var(--surface)}
+.arrow-cell{color:var(--text-f);font-size:.8rem}
+.count-pill{background:#FEF3C7;color:#92400E;padding:2px 10px;border-radius:999px;font-weight:700;margin-left:8px;font-size:.8rem}
+.empty-msg{text-align:center;padding:32px;color:var(--text-f);font-size:.875rem}
+.swing-risk-low{color:#F87171;font-weight:600}
+.swing-risk-mid{color:#FBBF24;font-weight:600}
+.swing-risk-ok{color:#34D399;font-weight:600}
+
+/* ── Footer ─────────────────────────────── */
+footer{text-align:center;padding:32px 20px;color:var(--text-f);font-size:.75rem;line-height:1.8}
+footer a{color:var(--text-m);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+/* ── Loading / Error ─────────────────────── */
+.loading{text-align:center;padding:80px 20px;color:var(--text-m)}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:#3B82F6;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:24px;margin:40px auto;max-width:600px;text-align:center;color:#991B1B}
+.error-box code{background:#FEE2E2;padding:2px 6px;border-radius:4px;font-family:monospace}
+
+/* ── Mobile card view ──────────────────── */
+.const-cards-wrap{display:none}
+.mob-card{background:var(--card);border-radius:10px;margin-bottom:10px;padding:12px 14px;box-shadow:0 1px 3px var(--shadow)}
+.mob-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.mob-const-name{font-weight:700;font-size:.95rem;color:var(--text)}
+.mob-const-no{font-size:.7rem;color:var(--text-f);margin-right:3px}
+.mob-chips{display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.mob-chip{font-size:.68rem;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.mob-chip.margin{background:rgba(59,130,246,.15);color:#60A5FA}
+.mob-chip.swing-risk-low{background:rgba(248,113,113,.15);color:#F87171;font-weight:700}
+.mob-chip.swing-risk-mid{background:rgba(251,191,36,.15);color:#FBBF24;font-weight:700}
+.mob-chip.swing-risk-ok{background:rgba(52,211,153,.15);color:#34D399}
+.mob-cand{display:flex;align-items:center;gap:6px;padding:5px 0;border-top:1px solid var(--surface)}
+.mob-pos{font-size:.65rem;font-weight:700;color:var(--text-f);width:20px;flex-shrink:0}
+.mob-name{font-size:.8rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.mob-name.dim{color:var(--text-m)}
+.mob-pct{font-size:.78rem;font-weight:600;flex-shrink:0;margin-left:4px}
+
+/* ── Responsive ─────────────────────────── */
+@media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.detail-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){
+  .site-header{flex-direction:column;padding:12px 16px;gap:8px}
+  .tabs{width:100%;justify-content:center}
+  .grid-4{grid-template-columns:repeat(2,1fr)}
+  .swing-number{font-size:3rem}
+  .detail-grid{grid-template-columns:1fr 1fr}
+  .const-table-wrap{display:none}
+  .const-cards-wrap{display:block}
+  .swing-filters{flex-direction:column;align-items:center}
+  .sf-group select{min-width:0;width:100%;max-width:340px}
+  .flip-table .hide-mob{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="title-block">
+    <h1>Tamil Nadu Legislative Assembly Election 2026</h1>
+    <div class="sub">234 Constituencies &nbsp;·&nbsp; Results as of 4 May 2026 &nbsp;·&nbsp; Source: Election Commission of India</div>
+  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab-btn" onclick="switchTab('constituencies',this)">Constituencies</button>
+    <button class="tab-btn" onclick="switchTab('swing',this)">Swing Simulator</button>
+  </nav>
+  <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">☀ Light</button>
+</header>
+
+<main>
+
+<!-- ══════════════════════ OVERVIEW ══════════════════════ -->
+<div id="tab-overview" class="tab-panel active">
+  <div class="grid-4">
+    <div class="card">
+      <div class="metric-label">Total Constituencies</div>
+      <div class="metric-value">234</div>
+      <div class="metric-sub">233 results declared</div>
+    </div>
+    <div class="card" id="m-winner">
+      <div class="loading"><div class="loading-spinner"></div></div>
+    </div>
+    <div class="card" id="m-closest">
+      <div class="loading"><div class="loading-spinner"></div></div>
+    </div>
+    <div class="card" id="m-votes">
+      <div class="loading"><div class="loading-spinner"></div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">Seats Won</div>
+      <div class="chart-wrap-md"><canvas id="chart-seats"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Vote Share</div>
+      <div class="chart-wrap-md"><canvas id="chart-votes"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Party Performance</div>
+    <div style="overflow-x:auto">
+      <table class="party-table">
+        <thead>
+          <tr>
+            <th>Party</th>
+            <th class="right">1st (Won)</th>
+            <th class="right">2nd</th>
+            <th class="right">3rd</th>
+            <th class="right">4th</th>
+            <th class="right">Total Votes</th>
+            <th>Vote Share</th>
+          </tr>
+        </thead>
+        <tbody id="party-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════ CONSTITUENCIES ══════════════════════ -->
+<div id="tab-constituencies" class="tab-panel">
+  <div class="card">
+    <div class="controls-bar">
+      <input type="text" class="search-input" id="search-input"
+             placeholder="Search constituency, candidate, or party…" oninput="filterConst()">
+      <select class="filter-select" id="party-filter" onchange="filterConst()">
+        <option value="">All winning parties</option>
+      </select>
+      <span id="const-count" style="font-size:.8rem;color:#64748B;white-space:nowrap"></span>
+    </div>
+    <!-- desktop table -->
+    <div class="const-table-wrap" style="overflow-x:auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:36px;cursor:default"></th>
+            <th onclick="setSort('const_no')" id="th-const_no" class="sort-active">#<i class="sort-icon">↑</i></th>
+            <th onclick="setSort('name')" id="th-name">Constituency<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('p1_candidate')" id="th-p1_candidate">Winner<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('p1_party')" id="th-p1_party">Party<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('p2_candidate')" id="th-p2_candidate">Runner-up<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('p2_party')" id="th-p2_party">Party<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('p3_party')" id="th-p3_party">3rd Place<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('p4_party')" id="th-p4_party">4th Place<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('margin')" id="th-margin" class="right">Margin<i class="sort-icon">↕</i></th>
+            <th onclick="setSort('swing_pct')" id="th-swing_pct" class="right">Swing to flip<i class="sort-icon">↕</i></th>
+          </tr>
+        </thead>
+        <tbody id="const-tbody"></tbody>
+      </table>
+    </div>
+    <!-- mobile cards -->
+    <div class="const-cards-wrap" id="const-cards"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════ SWING SIMULATOR ══════════════════════ -->
+<div id="tab-swing" class="tab-panel">
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="swing-hero">
+      <div class="swing-number" id="swing-display">0.0<span class="pct">%</span></div>
+      <div class="swing-desc">Uniform vote swing: winner's votes move to runner-up in each constituency</div>
+      <input type="range" id="swing-slider" min="0" max="10" step="0.1" value="0" oninput="onSwing()">
+      <div class="range-labels">
+        <span>0%</span><span>2.5%</span><span>5%</span><span>7.5%</span><span>10%</span>
+      </div>
+    </div>
+
+    <div class="swing-filters">
+      <div class="sf-group">
+        <label>Votes move FROM (winner party)</label>
+        <select id="from-party" onchange="onSwing()">
+          <option value="">All parties</option>
+        </select>
+      </div>
+      <div class="sf-group">
+        <label>Votes move TO (runner-up party)</label>
+        <select id="to-party" onchange="onSwing()">
+          <option value="">All parties</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="swing-summary" id="swing-summary">
+      <div class="ss-stat">
+        <div class="n" id="ss-flip">0</div>
+        <div class="l">seats flip</div>
+      </div>
+      <div class="ss-divider"></div>
+      <div class="ss-stat">
+        <div class="n" id="ss-gainer" style="font-size:1.1rem">—</div>
+        <div class="l">biggest gainer</div>
+      </div>
+      <div class="ss-divider"></div>
+      <div class="ss-stat">
+        <div class="n" id="ss-loser" style="font-size:1.1rem">—</div>
+        <div class="l">biggest loser</div>
+      </div>
+      <div class="ss-divider"></div>
+      <div class="ss-stat">
+        <div class="n" id="ss-majority" style="font-size:1.1rem">—</div>
+        <div class="l">majority at 118</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">Projected Seat Count</div>
+      <div class="chart-wrap-lg"><canvas id="chart-swing"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Seat Changes</div>
+      <div class="party-change-grid" id="party-changes"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      Seats that flip
+      <span class="count-pill" id="flip-count">0</span>
+    </div>
+    <div id="flip-wrap">
+      <div class="empty-msg" id="flip-empty">No seats flip at this swing level and filter combination.</div>
+      <div class="flip-wrap" id="flip-table-wrap" style="display:none">
+        <table class="flip-table">
+          <thead>
+            <tr>
+              <th>Constituency</th>
+              <th>Current winner</th>
+              <th class="arrow-cell"></th>
+              <th>New winner</th>
+              <th class="right">Margin</th>
+              <th class="right">Swing needed</th>
+              <th class="right">Winner votes</th>
+              <th class="right">Runner-up votes</th>
+            </tr>
+          </thead>
+          <tbody id="flip-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<footer>
+  Data: <a href="https://results.eci.gov.in" target="_blank">results.eci.gov.in</a>
+  &nbsp;·&nbsp; Tamil Nadu Legislative Assembly Election, May 2026
+  &nbsp;·&nbsp; Swing model assumes uniform vote transfer from winner to runner-up in each constituency
+</footer>
+
+<script>
+// ══════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════
+let partyData = [], top4Data = [], swingsData = [];
+let filteredTop4 = [];
+let swingChart = null;
+let openRow = null;   // currently expanded constituency row id
+
+// ══════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════
+const fmt  = n => (n == null ? '—' : Number(n).toLocaleString('en-IN'));
+const fmtP = v => (v == null ? '—' : v.toFixed(2) + '%');
+
+function badge(party, color, short) {
+  return `<span class="badge" style="background:${color || '#94A3B8'}">${short || party}</span>`;
+}
+
+function swingColorClass(pct) {
+  if (pct == null) return '';
+  if (pct < 1)  return 'swing-risk-low';
+  if (pct < 3)  return 'swing-risk-mid';
+  return 'swing-risk-ok';
+}
+
+// ══════════════════════════════════════════════
+// Tab switching
+// ══════════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+// Data loading
+// ══════════════════════════════════════════════
+async function loadAll() {
+  const [party, top4, swings] = await Promise.all([
+    fetch('./data/party_summary.json').then(r => r.json()),
+    fetch('./data/top4.json').then(r => r.json()),
+    fetch('./data/swings.json').then(r => r.json()),
+  ]);
+  partyData  = party;
+  top4Data   = top4;
+  swingsData = swings;
+  filteredTop4 = [...top4Data];
+
+  renderOverview();
+  initConstituencies();
+  initSwingSimulator();
+}
+
+// ══════════════════════════════════════════════
+// Overview
+// ══════════════════════════════════════════════
+function renderOverview() {
+  const winner = partyData[0];
+  document.getElementById('m-winner').innerHTML = `
+    <div class="metric-label">Biggest Winner</div>
+    <div class="metric-value" style="color:${winner.color}">${winner.seats_won}</div>
+    <div class="metric-sub">${winner.short} &nbsp;·&nbsp; ${winner.vote_pct}% vote share</div>`;
+
+  const closest = swingsData[0];
+  document.getElementById('m-closest').innerHTML = `
+    <div class="metric-label">Tightest Margin</div>
+    <div class="metric-value">${fmt(closest.margin)}</div>
+    <div class="metric-sub">${closest.constituency}</div>`;
+
+  const totalVotes = top4Data.reduce((s, r) => s + (r.total_votes || 0), 0);
+  document.getElementById('m-votes').innerHTML = `
+    <div class="metric-label">Total Votes Cast</div>
+    <div class="metric-value" style="font-size:1.8rem">${(totalVotes / 1e6).toFixed(2)}M</div>
+    <div class="metric-sub">Across 234 constituencies</div>`;
+
+  // Seats bar chart
+  const seatsParties = partyData.filter(p => p.seats_won > 0 || p.vote_pct >= 3);
+  new Chart(document.getElementById('chart-seats'), {
+    type: 'bar',
+    data: {
+      labels: seatsParties.map(p => p.short),
+      datasets: [{
+        data: seatsParties.map(p => p.seats_won),
+        backgroundColor: seatsParties.map(p => p.color),
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: i => seatsParties[i[0].dataIndex].party,
+          label: i => ` ${i.raw} seats`,
+        }}
+      },
+      scales: {
+        x: { grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { color: '#475569', font: { size: 12 } } },
+      }
+    }
+  });
+
+  // Vote share donut
+  const voteParties = partyData.filter(p => p.vote_pct >= 1 && p.party !== 'None of the Above');
+  const otherPct = +(partyData
+    .filter(p => p.vote_pct < 1 && p.party !== 'None of the Above')
+    .reduce((s, p) => s + p.vote_pct, 0)).toFixed(2);
+
+  new Chart(document.getElementById('chart-votes'), {
+    type: 'doughnut',
+    data: {
+      labels: [...voteParties.map(p => p.short), 'Others'],
+      datasets: [{
+        data: [...voteParties.map(p => p.vote_pct), otherPct],
+        backgroundColor: [...voteParties.map(p => p.color), '#CBD5E1'],
+        borderWidth: 2, borderColor: 'white',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 12, padding: 14, font: { size: 11 }, color: '#475569' } },
+        tooltip: { callbacks: {
+          title: i => i[0].dataIndex < voteParties.length ? voteParties[i[0].dataIndex].party : 'Others',
+          label: i => ` ${i.raw}%`,
+        }}
+      },
+      cutout: '62%',
+    }
+  });
+
+  // Party performance table
+  const notable = partyData.filter(p => p.seats_won > 0 || p.seats_2nd > 0 || p.vote_pct >= 1);
+  const maxVP = Math.max(...notable.map(p => p.vote_pct));
+  document.getElementById('party-tbody').innerHTML = notable.map(p => `
+    <tr>
+      <td>
+        <span class="badge" style="background:${p.color}">${p.short}</span>
+        <span style="margin-left:8px;font-size:.82rem;color:#475569">${p.party}</span>
+      </td>
+      <td class="right"><strong>${p.seats_won}</strong></td>
+      <td class="right" style="color:#64748B">${p.seats_2nd}</td>
+      <td class="right" style="color:#64748B">${p.seats_3rd}</td>
+      <td class="right" style="color:#94A3B8">${p.seats_4th}</td>
+      <td class="right" style="color:#64748B">${fmt(p.total_votes)}</td>
+      <td>
+        <div class="vote-bar-bg"><div class="vote-bar-fg" style="width:${(p.vote_pct/maxVP*100).toFixed(1)}%;background:${p.color}"></div></div>
+        ${p.vote_pct}%
+      </td>
+    </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// Constituencies
+// ══════════════════════════════════════════════
+function initConstituencies() {
+  const parties = [...new Set(top4Data.map(r => r.p1_party).filter(Boolean))].sort();
+  const sel = document.getElementById('party-filter');
+  parties.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p;
+    o.textContent = (partyData.find(x => x.party === p) || {}).short || p;
+    sel.appendChild(o);
+  });
+  renderConst();
+}
+
+let sortCol = 'const_no', sortDir = 1;  // 1 = asc, -1 = desc
+
+function setSort(col) {
+  if (sortCol === col) { sortDir *= -1; }
+  else { sortCol = col; sortDir = 1; }
+  // Update header indicators
+  document.querySelectorAll('.data-table th').forEach(th => {
+    th.classList.remove('sort-active');
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = '↕';
+  });
+  const active = document.getElementById('th-' + col);
+  if (active) {
+    active.classList.add('sort-active');
+    const icon = active.querySelector('.sort-icon');
+    if (icon) icon.textContent = sortDir === 1 ? '↑' : '↓';
+  }
+  renderConst();
+}
+
+function filterConst() { renderConst(); }
+
+function renderConst() {
+  const q  = document.getElementById('search-input').value.toLowerCase();
+  const pf = document.getElementById('party-filter').value;
+
+  let data = top4Data.filter(r => {
+    if (pf && r.p1_party !== pf) return false;
+    if (q) {
+      const h = [r.constituency, r.p1_candidate, r.p2_candidate, r.p3_candidate, r.p4_candidate,
+                 r.p1_party, r.p2_party, r.p3_party, r.p4_party,
+                 r.p1_short, r.p2_short, r.p3_short, r.p4_short].join(' ').toLowerCase();
+      if (!h.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const strCols = new Set(['name','p1_candidate','p2_candidate','p1_party','p2_party','p3_party','p4_party']);
+  data.sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'name')         { av = a.constituency;   bv = b.constituency; }
+    else if (sortCol === 'p1_candidate') { av = a.p1_candidate || ''; bv = b.p1_candidate || ''; }
+    else if (sortCol === 'p2_candidate') { av = a.p2_candidate || ''; bv = b.p2_candidate || ''; }
+    else if (sortCol === 'p1_party')     { av = a.p1_party || '';     bv = b.p1_party || ''; }
+    else if (sortCol === 'p2_party')     { av = a.p2_party || '';     bv = b.p2_party || ''; }
+    else if (sortCol === 'p3_party')     { av = a.p3_party || '';     bv = b.p3_party || ''; }
+    else if (sortCol === 'p4_party')     { av = a.p4_party || '';     bv = b.p4_party || ''; }
+    else if (sortCol === 'margin')       { av = a.margin || 1e9;      bv = b.margin || 1e9; }
+    else if (sortCol === 'swing_pct')    { av = a.swing_pct ?? 999;   bv = b.swing_pct ?? 999; }
+    else                                 { av = a.const_no;           bv = b.const_no; }
+    if (strCols.has(sortCol)) return sortDir * av.localeCompare(bv);
+    return sortDir * (av - bv);
+  });
+
+  document.getElementById('const-count').textContent = `${data.length} of ${top4Data.length}`;
+
+  document.getElementById('const-tbody').innerHTML = data.map(r => {
+    const sc = swingColorClass(r.swing_pct);
+    return `
+    <tr class="main-row" id="mr-${r.const_no}" onclick="toggleConst(${r.const_no})">
+      <td><span class="expand-icon">&#9658;</span></td>
+      <td style="color:#94A3B8;font-size:.75rem">${r.const_no}</td>
+      <td><strong>${r.constituency}</strong></td>
+      <td style="white-space:nowrap">
+        <span style="font-size:.8rem">${r.p1_candidate || '—'}</span>
+        ${r.p1_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p1_pct.toFixed(1)}%</span>` : ''}
+      </td>
+      <td>${badge(r.p1_party, r.p1_color, r.p1_short)}</td>
+      <td style="white-space:nowrap">
+        <span style="font-size:.8rem;color:#64748B">${r.p2_candidate || '—'}</span>
+        ${r.p2_pct != null ? `<span style="font-size:.72rem;color:#94A3B8;margin-left:4px">${r.p2_pct.toFixed(1)}%</span>` : ''}
+      </td>
+      <td>${r.p2_party ? badge(r.p2_party, r.p2_color, r.p2_short) : '—'}</td>
+      <td style="white-space:nowrap">
+        ${r.p3_party ? badge(r.p3_party, r.p3_color, r.p3_short) : '—'}
+        ${r.p3_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p3_pct.toFixed(1)}%</span>` : ''}
+      </td>
+      <td style="white-space:nowrap">
+        ${r.p4_party ? badge(r.p4_party, r.p4_color, r.p4_short) : '—'}
+        ${r.p4_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p4_pct.toFixed(1)}%</span>` : ''}
+      </td>
+      <td class="right" style="font-weight:600">${fmt(r.margin)}</td>
+      <td class="right ${sc}">${fmtP(r.swing_pct)}</td>
+    </tr>
+    <tr id="dr-${r.const_no}" class="detail-row" style="display:none">
+      <td colspan="11">
+        <div class="detail-content">
+          <div class="detail-meta">
+            Total valid votes: <strong>${fmt(r.total_votes)}</strong>
+            &nbsp;·&nbsp; Margin: <strong>${fmt(r.margin)}</strong>
+            &nbsp;·&nbsp; Swing to flip: <strong class="${sc}">${fmtP(r.swing_pct)}</strong>
+          </div>
+          <div class="detail-grid">
+            ${[1,2,3,4].map(p => {
+              const cand  = r[`p${p}_candidate`];
+              if (!cand) return '';
+              const party = r[`p${p}_party`];
+              const votes = r[`p${p}_votes`];
+              const pct   = r[`p${p}_pct`];
+              const color = r[`p${p}_color`];
+              const short = r[`p${p}_short`];
+              const medals = ['1st','2nd','3rd','4th'];
+              return `
+              <div class="cand-card" style="border-color:${color}">
+                <div class="cand-rank">${medals[p-1]} place</div>
+                <div class="cand-name">${cand}</div>
+                <div class="cand-party-label"><span class="badge" style="background:${color};font-size:.65rem">${short}</span> ${party}</div>
+                <div class="cand-votes">${fmt(votes)}</div>
+                <div class="cand-pct">${pct != null ? pct.toFixed(2) + '% of votes' : ''}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Mobile card view
+  const POS_LABELS = ['1st','2nd','3rd','4th'];
+  document.getElementById('const-cards').innerHTML = data.map(r => {
+    const sc = swingColorClass(r.swing_pct);
+    const candRows = [1,2,3,4].map(p => {
+      const cand  = r[`p${p}_candidate`];
+      const party = r[`p${p}_party`];
+      if (!cand && !party) return '';
+      const color = r[`p${p}_color`] || '#94A3B8';
+      const short = r[`p${p}_short`] || party;
+      const pct   = r[`p${p}_pct`];
+      return `
+      <div class="mob-cand">
+        <span class="mob-pos">${POS_LABELS[p-1]}</span>
+        <span class="badge" style="background:${color};flex-shrink:0">${short}</span>
+        <span class="mob-name${p > 1 ? ' dim' : ''}">${cand || ''}</span>
+        <span class="mob-pct" style="color:${color}">${pct != null ? pct.toFixed(1)+'%' : ''}</span>
+      </div>`;
+    }).join('');
+    return `
+    <div class="mob-card">
+      <div class="mob-card-header">
+        <div><span class="mob-const-no">#${r.const_no}</span><span class="mob-const-name">${r.constituency}</span></div>
+        <div class="mob-chips">
+          <span class="mob-chip margin">Margin ${fmt(r.margin)}</span>
+          <span class="mob-chip ${sc}">Swing ${fmtP(r.swing_pct)}</span>
+        </div>
+      </div>
+      ${candRows}
+    </div>`;
+  }).join('');
+}
+
+function toggleConst(id) {
+  const mr = document.getElementById('mr-' + id);
+  const dr = document.getElementById('dr-' + id);
+  const isOpen = dr.style.display !== 'none';
+
+  // Close previous
+  if (openRow && openRow !== id) {
+    const pm = document.getElementById('mr-' + openRow);
+    const pd = document.getElementById('dr-' + openRow);
+    if (pd) { pd.style.display = 'none'; pm && pm.classList.remove('open'); }
+  }
+
+  if (isOpen) {
+    dr.style.display = 'none';
+    mr.classList.remove('open');
+    openRow = null;
+  } else {
+    dr.style.display = '';
+    mr.classList.add('open');
+    openRow = id;
+    dr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// ══════════════════════════════════════════════
+// Swing Simulator
+// ══════════════════════════════════════════════
+function initSwingSimulator() {
+  const winners  = [...new Set(swingsData.map(s => s.winner_party).filter(Boolean))].sort();
+  const runners  = [...new Set(swingsData.map(s => s.runner_party).filter(Boolean))].sort();
+
+  const fromSel = document.getElementById('from-party');
+  const toSel   = document.getElementById('to-party');
+
+  winners.forEach(p => {
+    const o = document.createElement('option');
+    const pd = partyData.find(x => x.party === p);
+    o.value = p; o.textContent = pd ? pd.short : p;
+    fromSel.appendChild(o);
+  });
+  runners.forEach(p => {
+    const o = document.createElement('option');
+    const pd = partyData.find(x => x.party === p);
+    o.value = p; o.textContent = pd ? pd.short : p;
+    toSel.appendChild(o);
+  });
+
+  // Build initial chart (all parties with seats won)
+  const seatParties = partyData.filter(p => p.seats_won > 0);
+  swingChart = new Chart(document.getElementById('chart-swing'), {
+    type: 'bar',
+    data: {
+      labels: seatParties.map(p => p.short),
+      datasets: [
+        {
+          label: 'Current',
+          data: seatParties.map(p => p.seats_won),
+          backgroundColor: 'rgba(148,163,184,0.18)',  // neutral slate, same for all
+          borderColor: 'rgba(148,163,184,0.55)',
+          borderWidth: 2,
+          borderRadius: 4,
+        },
+        {
+          label: 'Projected',
+          data: seatParties.map(p => p.seats_won),
+          backgroundColor: seatParties.map(p => p.color),
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 }, color: '#475569' } },
+        tooltip: { callbacks: {
+          title: i => seatParties[i[0].dataIndex].party,
+          label: i => ` ${i.raw} seats (${i.dataset.label})`,
+        }}
+      },
+      scales: {
+        x: { grid: { color: '#F1F5F9' }, ticks: { color: '#94A3B8', font: { size: 11 } }, min: 0 },
+        y: { grid: { display: false }, ticks: { color: '#475569', font: { size: 12 } } },
+      }
+    }
+  });
+
+  // Annotate 118-seat majority line
+  updateSliderTrack();
+  onSwing();
+}
+
+function updateSliderTrack() {
+  const sl = document.getElementById('swing-slider');
+  const pct = ((sl.value - sl.min) / (sl.max - sl.min) * 100).toFixed(1);
+  sl.style.background = `linear-gradient(to right,#3B82F6 0%,#3B82F6 ${pct}%,#E2E8F0 ${pct}%,#E2E8F0 100%)`;
+}
+
+function onSwing() {
+  updateSliderTrack();
+  const swingPct  = parseFloat(document.getElementById('swing-slider').value);
+  const fromParty = document.getElementById('from-party').value;
+  const toParty   = document.getElementById('to-party').value;
+
+  document.getElementById('swing-display').innerHTML =
+    swingPct.toFixed(1) + '<span class="pct">%</span>';
+
+  // Seats that flip
+  const flipping = swingsData.filter(s => {
+    if (s.swing_pct == null || s.swing_pct > swingPct) return false;
+    if (fromParty && s.winner_party !== fromParty) return false;
+    if (toParty   && s.runner_party !== toParty)   return false;
+    return true;
+  });
+
+  // New seat counts
+  const newCounts = {};
+  partyData.forEach(p => { newCounts[p.party] = p.seats_won; });
+  flipping.forEach(s => {
+    if (newCounts[s.winner_party] != null) newCounts[s.winner_party]--;
+    newCounts[s.runner_party] = (newCounts[s.runner_party] || 0) + 1;
+  });
+
+  // Summary bar
+  const gains  = {}, losses = {};
+  flipping.forEach(s => {
+    losses[s.winner_party] = (losses[s.winner_party] || 0) + 1;
+    gains[s.runner_party]  = (gains[s.runner_party]  || 0) + 1;
+  });
+  document.getElementById('ss-flip').textContent = flipping.length;
+
+  if (flipping.length > 0) {
+    const bg = Object.entries(gains).sort((a,b) => b[1]-a[1])[0];
+    const bl = Object.entries(losses).sort((a,b) => b[1]-a[1])[0];
+    const bgP = partyData.find(x => x.party === bg[0]);
+    const blP = partyData.find(x => x.party === bl[0]);
+    document.getElementById('ss-gainer').innerHTML =
+      `<span style="color:${bgP?.color || '#64748B'}">${bgP?.short || bg[0]}</span> +${bg[1]}`;
+    document.getElementById('ss-loser').innerHTML =
+      `<span style="color:${blP?.color || '#64748B'}">${blP?.short || bl[0]}</span> &minus;${bl[1]}`;
+  } else {
+    document.getElementById('ss-gainer').textContent = '—';
+    document.getElementById('ss-loser').textContent  = '—';
+  }
+
+  // Majority indicator
+  const majorityParty = partyData.filter(p => (newCounts[p.party] || 0) >= 118)[0];
+  if (majorityParty) {
+    const mp = partyData.find(x => x.party === majorityParty.party);
+    document.getElementById('ss-majority').innerHTML =
+      `<span style="color:${mp.color}">${mp.short}</span> (${newCounts[majorityParty.party]})`;
+  } else {
+    document.getElementById('ss-majority').textContent = 'Hung';
+  }
+
+  // Update chart
+  const seatParties = partyData.filter(p => p.seats_won > 0);
+  swingChart.data.datasets[1].data = seatParties.map(p => newCounts[p.party] || 0);
+  swingChart.update('active');
+
+  // Party changes grid
+  const allParties = partyData.filter(p =>
+    p.seats_won > 0 || (newCounts[p.party] != null && newCounts[p.party] > 0)
+  );
+  document.getElementById('party-changes').innerHTML = allParties.map(p => {
+    const cur  = p.seats_won;
+    const proj = newCounts[p.party] || 0;
+    const d    = proj - cur;
+    const dc   = d > 0 ? 'gain' : d < 0 ? 'loss' : 'same';
+    const ds   = d > 0 ? `+${d}` : d < 0 ? `${d}` : '=';
+    return `
+    <div class="pc-item">
+      <div class="pc-dot" style="background:${p.color}"></div>
+      <div class="pc-info">
+        <span class="pc-short">${p.short}</span>
+        <span class="pc-seats">${proj}</span>
+        <span class="pc-delta ${dc}">${ds}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Flip table
+  document.getElementById('flip-count').textContent = flipping.length;
+  const flipEmpty = document.getElementById('flip-empty');
+  const flipWrap  = document.getElementById('flip-table-wrap');
+
+  if (flipping.length === 0) {
+    flipEmpty.style.display = 'block';
+    flipWrap.style.display  = 'none';
+  } else {
+    flipEmpty.style.display = 'none';
+    flipWrap.style.display  = 'block';
+    document.getElementById('flip-tbody').innerHTML = flipping.map(s => `
+      <tr>
+        <td><strong>${s.constituency}</strong></td>
+        <td>${badge(s.winner_party, s.winner_color, s.winner_short)}
+            <span style="font-size:.75rem;color:#64748B;margin-left:4px">${s.winner}</span></td>
+        <td class="arrow-cell">&#8594;</td>
+        <td>${badge(s.runner_party, s.runner_color, s.runner_short)}
+            <span style="font-size:.75rem;color:#64748B;margin-left:4px">${s.runner_up}</span></td>
+        <td class="right" style="color:#64748B">${fmt(s.margin)}</td>
+        <td class="right ${swingColorClass(s.swing_pct)}">${fmtP(s.swing_pct)}</td>
+        <td class="right">${fmt(s.winner_votes)}
+            <span style="color:#94A3B8;font-size:.72rem">&nbsp;${s.winner_pct != null ? '(' + s.winner_pct.toFixed(1) + '%)' : ''}</span></td>
+        <td class="right">${fmt(s.runner_votes)}
+            <span style="color:#94A3B8;font-size:.72rem">&nbsp;${s.runner_pct != null ? '(' + s.runner_pct.toFixed(1) + '%)' : ''}</span></td>
+      </tr>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+// Theme
+// ══════════════════════════════════════════════
+function applyChartTheme(isDark) {
+  Chart.defaults.color      = isDark ? '#64748B' : '#94A3B8';
+  Chart.defaults.borderColor = isDark ? '#334155' : '#E2E8F0';
+  Object.values(Chart.instances).forEach(ch => {
+    if (ch.options.scales) {
+      Object.values(ch.options.scales).forEach(sc => {
+        if (sc.grid)  sc.grid.color  = isDark ? '#334155' : '#E2E8F0';
+        if (sc.ticks) sc.ticks.color = isDark ? '#64748B' : '#94A3B8';
+      });
+    }
+    if (ch.options.plugins?.legend?.labels)
+      ch.options.plugins.legend.labels.color = isDark ? '#94A3B8' : '#475569';
+    ch.update('none');
+  });
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') !== 'dark';
+  html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  localStorage.setItem('tn-theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-btn').textContent = isDark ? '☀ Light' : '☾ Dark';
+  applyChartTheme(isDark);
+}
+
+// Apply saved theme preference (default: dark)
+(function initTheme() {
+  const saved = localStorage.getItem('tn-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('theme-btn').textContent = saved === 'dark' ? '☀ Light' : '☾ Dark';
+  applyChartTheme(saved === 'dark');
+})();
+
+// ══════════════════════════════════════════════
+// Boot
+// ══════════════════════════════════════════════
+loadAll().catch(err => {
+  document.querySelector('main').innerHTML = `
+    <div class="error-box">
+      <div style="font-size:1.25rem;margin-bottom:10px">Could not load data files</div>
+      <div>Run <code>python convert_to_json.py</code> to generate the <code>data/</code> folder,
+           then serve this file via a web server (or push to GitHub Pages).</div>
+      <div style="margin-top:10px;font-size:.8rem;opacity:.7">${err.message}</div>
+    </div>`;
+});
+</script>
+</body>
+</html>
