@@ -1,5 +1,5 @@
 ﻿const_no,constituency,margin,swing_to_flip,swing_pct,total_votes,winner,winner_party,winner_votes,winner_pct,runner_up,runner_party,runner_votes,runner_pct
-185,TIRUPPATTUR,30,15,0.01,215316,PERIAKARUPPAN. KR,Dravida Munnetra Kazhagam,83226,38.65,SEENIVASA SETHUPATHY. R,Tamilaga Vettri Kazhagam,83196,38.64
+185,TIRUPPATTUR,1,1,0.0,215710,SEENIVASA SETHUPATHY. R,Tamilaga Vettri Kazhagam,83375,38.65,PERIAKARUPPAN. KR,Dravida Munnetra Kazhagam,83374,38.65
 54,VEPPANAHALLI,138,69,0.03,222608,SRINIVASAN.P.S,Dravida Munnetra Kazhagam,74691,33.55,MUNUSAMY.K.P,All India Anna Dravida Munnetra Kazhagam,74553,33.49
 229,KANNIYAKUMARI,214,107,0.04,239150,THALAVAI SUNDARAM. N,All India Anna Dravida Munnetra Kazhagam,75045,31.38,MAHESH.R,Dravida Munnetra Kazhagam,74831,31.29
 66,POLUR,227,114,0.05,211743,ABISHEK. R,Tamilaga Vettri Kazhagam,67961,32.1,SARAVANAN. P,Desiya Murpokku Dravida Kazhagam,67734,31.99
