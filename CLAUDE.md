@@ -91,7 +91,19 @@ Pure static HTML/CSS/JS — works on GitHub Pages with no build step.
 - `ALLIANCE_MAP`, `ALLIANCE_COLORS`, `ALLIANCE_ORDER` constants in `index.html`; `resolveShort(party, short)` and `resolveColor(party, color)` helpers return alliance or party values based on `allianceMode`
 - `getDisplayPartyData()` aggregates `partyData` by alliance when active; `projCount(item)` in `onSwing()` sums party-level projected counts per alliance
 
-**Swing model**: a seat flips when `swing_pct <= slider value`. `swing_pct = (margin/2) / total_votes × 100`. The "from/to" dropdowns filter by winner_party and runner_party respectively.
+**Swing model**: generalised FROM → TO vote transfer. The slider represents the % of total votes in each constituency that shift from the FROM party to the TO party.
+
+- **FROM / TO dropdowns** list every party that appears in any finishing position (p1–p4) across all 234 constituencies (not just winners/runners). Default blank values mean "All winners" / "All runners", preserving the classic winner→runner behaviour.
+- **Flip threshold** is computed per constituency by `computeFlipPct(t, fromVal, toVal)` based on the positions of the FROM and TO parties in that constituency:
+  - FROM=winner, TO=runner (default): `margin / (2 × total_votes) × 100`
+  - FROM=winner, TO=non-runner: `min(margin / total_votes, (p1−pT) / (2×total_votes)) × 100`
+  - FROM=non-winner, TO=any non-winner: `(p1_votes − to_votes) / total_votes × 100`; returns null if FROM party doesn't have enough votes to supply the needed margin
+  - TO=winner: null (winner only grows stronger)
+  - Constituencies where the FROM or TO party is absent are skipped
+- **New winner** is determined by `computeNewWinner()` — applies the delta and finds the party with the most votes after the transfer; may be p3 or p4, not necessarily the runner-up
+- Seat counts, the projected bar chart, seat-change chips, majority indicator, and flip table all use the actual new winner (not always runner_party)
+- In **alliance mode**, `resolveToParty()` maps each alliance to its highest-placed member party in the constituency before applying the same formula
+- Helper functions: `buildTop4Map()` (indexes top4Data by const_no at init), `resolveToParty()`, `computeFlipPct()`, `computeNewWinner()`, `partyDetailsInConstituency()`; `top4Map` global holds the indexed data
 
 **GitHub Actions deployment** (`.github/workflows/deploy.yml`):
 - Triggers on push to `main` or manual `workflow_dispatch`

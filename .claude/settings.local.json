@@ -11,7 +11,12 @@
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('party_summary OK,', len\\(d\\), 'parties'\\)\")",
       "Bash(curl -s http://localhost:8765/data/top4.json)",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('top4 OK,', len\\(d\\), 'rows'\\)\" kill %1)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(start \"\" \"http://localhost:8765\")",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Invoke-WebRequest -Uri \"http://localhost:8765\" -UseBasicParsing)",
+      "Bash(Select-Object -ExpandProperty StatusCode)",
+      "PowerShell(Start-Sleep -Seconds 2; \\(Invoke-WebRequest -Uri \"http://localhost:8765\" -UseBasicParsing\\).StatusCode)"
     ]
   }
 }

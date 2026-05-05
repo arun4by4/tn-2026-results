@@ -328,15 +328,15 @@ footer a:hover{text-decoration:underline}
 
     <div class="swing-filters">
       <div class="sf-group">
-        <label>Votes move FROM (winner party)</label>
+        <label>Votes move FROM</label>
         <select id="from-party" onchange="onSwing()">
-          <option value="">All parties</option>
+          <option value="">All winners</option>
         </select>
       </div>
       <div class="sf-group">
-        <label>Votes move TO (runner-up party)</label>
+        <label>Votes move TO</label>
         <select id="to-party" onchange="onSwing()">
-          <option value="">All parties</option>
+          <option value="">All runners</option>
         </select>
       </div>
     </div>
@@ -418,6 +418,7 @@ footer a:hover{text-decoration:underline}
 let partyData = [], top4Data = [], swingsData = [];
 let filteredTop4 = [];
 let swingChart = null, seatsChart = null, votesChart = null;
+let top4Map = {};
 let openRow = null;
 let allianceMode = false;
 
@@ -898,9 +899,109 @@ function toggleConst(id) {
 }
 
 // ══════════════════════════════════════════════
+// Swing Simulator helpers
+// ══════════════════════════════════════════════
+const POSITIONS = ['p1','p2','p3','p4'];
+
+function buildTop4Map() {
+  top4Map = {};
+  top4Data.forEach(t => { top4Map[t.const_no] = t; });
+}
+
+// Resolve a FROM/TO value (party name or alliance name) to the actual party name in constituency t.
+// Returns null if the party/alliance is not present in this constituency.
+function resolveToParty(val, t) {
+  if (!val) return null;
+  if (allianceMode) {
+    const pos = POSITIONS.find(p => t[p+'_party'] && getAlliance(t[p+'_party']) === val);
+    return pos ? t[pos+'_party'] : null;
+  }
+  return POSITIONS.some(p => t[p+'_party'] === val) ? val : null;
+}
+
+// Returns the effective swing_pct at which this constituency would flip given votes
+// moving from fromVal to toVal. Returns null if this constituency is unaffected.
+function computeFlipPct(t, fromVal, toVal) {
+  const tv = t.total_votes;
+  const fromParty = fromVal ? resolveToParty(fromVal, t) : null;
+  const toParty   = toVal   ? resolveToParty(toVal,   t) : null;
+
+  if (fromVal && !fromParty) return null; // FROM party/alliance absent here
+  if (toVal   && !toParty)   return null; // TO party/alliance absent here
+
+  const effectiveFrom = fromParty || t.p1_party;
+  const effectiveTo   = toParty   || t.p2_party;
+
+  const fromPos = POSITIONS.find(p => t[p+'_party'] === effectiveFrom);
+  const toPos   = POSITIONS.find(p => t[p+'_party'] === effectiveTo);
+
+  if (!fromPos || !toPos || fromPos === toPos) return t.swing_pct; // fallback
+
+  const p1v   = t.p1_votes;
+  const fromV = t[fromPos+'_votes'];
+  const toV   = t[toPos+'_votes'];
+
+  // Standard winner→runner case
+  if (fromPos === 'p1' && toPos === 'p2') return t.swing_pct;
+
+  if (fromPos === 'p1') {
+    // Winner loses delta, toPos gains delta; p2 unchanged.
+    // p2 overtakes p1 when delta > margin: flip_pct = margin/tv*100
+    // toPos overtakes p1 when 2*delta > p1v-toV: flip_pct = (p1v-toV)/(2*tv)*100
+    const flipByP2 = (p1v - t.p2_votes) / tv * 100;
+    const flipByTo = (p1v - toV)         / (2 * tv) * 100;
+    return Math.min(flipByP2, flipByTo);
+  }
+
+  if (toPos === 'p1') return null; // winner gains votes — no flip
+
+  // FROM and TO are both non-winners: p1 unchanged, toPos gains delta.
+  // Flip when toPos surpasses p1: delta >= p1v - toV
+  const needed = p1v - toV;
+  if (needed <= 0) return 0;
+  if (fromV < needed) return null; // not enough FROM votes to flip even at max
+  return needed / tv * 100;
+}
+
+// Returns the party that would hold the most votes after the swing.
+function computeNewWinner(t, fromVal, toVal, swingPct) {
+  const tv    = t.total_votes;
+  const delta = tv * swingPct / 100;
+  const fromParty = fromVal ? resolveToParty(fromVal, t) : null;
+  const toParty   = toVal   ? resolveToParty(toVal,   t) : null;
+  const effectiveFrom = fromParty || t.p1_party;
+  const effectiveTo   = toParty   || t.p2_party;
+  const votes = {};
+  POSITIONS.forEach(pos => {
+    const party = t[pos+'_party'];
+    if (!party) return;
+    let v = t[pos+'_votes'] || 0;
+    if (party === effectiveFrom) v = Math.max(0, v - delta);
+    if (party === effectiveTo)   v += delta;
+    votes[party] = v;
+  });
+  return Object.entries(votes).sort((a, b) => b[1] - a[1])[0]?.[0];
+}
+
+// Look up display details (color, short, candidate, votes, pct) for any party in a top4 row.
+function partyDetailsInConstituency(party, t) {
+  const pos = POSITIONS.find(p => t[p+'_party'] === party);
+  const pd  = partyData.find(x => x.party === party);
+  return {
+    color:     pd?.color     || (pos ? t[pos+'_color'] : '#94A3B8') || '#94A3B8',
+    short:     pd?.short     || (pos ? t[pos+'_short'] : party)     || party,
+    candidate: pos ? t[pos+'_candidate'] : '—',
+    votes:     pos ? t[pos+'_votes']     : null,
+    pct:       pos ? t[pos+'_pct']       : null,
+  };
+}
+
+// ══════════════════════════════════════════════
 // Swing Simulator
 // ══════════════════════════════════════════════
 function initSwingSimulator() {
+  buildTop4Map();
+
   const fromSel = document.getElementById('from-party');
   const toSel   = document.getElementById('to-party');
   while (fromSel.options.length > 1) fromSel.remove(1);
@@ -914,19 +1015,15 @@ function initSwingSimulator() {
       const o2 = document.createElement('option'); o2.value = a; o2.textContent = a; toSel.appendChild(o2);
     });
   } else {
-    const winners = [...new Set(swingsData.map(s => s.winner_party).filter(Boolean))].sort();
-    const runners = [...new Set(swingsData.map(s => s.runner_party).filter(Boolean))].sort();
-    winners.forEach(p => {
-      const o = document.createElement('option');
+    // All parties appearing in any position across all constituencies
+    const allParties = [...new Set(
+      top4Data.flatMap(t => POSITIONS.map(pos => t[pos+'_party']).filter(Boolean))
+    )].sort();
+    allParties.forEach(p => {
       const pd = partyData.find(x => x.party === p);
-      o.value = p; o.textContent = pd ? pd.short : p;
-      fromSel.appendChild(o);
-    });
-    runners.forEach(p => {
-      const o = document.createElement('option');
-      const pd = partyData.find(x => x.party === p);
-      o.value = p; o.textContent = pd ? pd.short : p;
-      toSel.appendChild(o);
+      const label = pd ? pd.short : p;
+      const o1 = document.createElement('option'); o1.value = p; o1.textContent = label; fromSel.appendChild(o1);
+      const o2 = document.createElement('option'); o2.value = p; o2.textContent = label; toSel.appendChild(o2);
     });
   }
 
@@ -991,17 +1088,15 @@ function onSwing() {
   document.getElementById('swing-display').innerHTML =
     swingPct.toFixed(1) + '<span class="pct">%</span>';
 
-  const flipping = swingsData.filter(s => {
-    if (s.swing_pct == null || s.swing_pct > swingPct) return false;
-    if (fromVal) {
-      const fw = allianceMode ? getAlliance(s.winner_party) : s.winner_party;
-      if (fw !== fromVal) return false;
-    }
-    if (toVal) {
-      const rw = allianceMode ? getAlliance(s.runner_party) : s.runner_party;
-      if (rw !== toVal) return false;
-    }
-    return true;
+  // Compute which constituencies flip using generalised from→to swing model
+  const flipping = [];
+  swingsData.forEach(s => {
+    const t = top4Map[s.const_no];
+    if (!t) return;
+    const ePct = computeFlipPct(t, fromVal, toVal);
+    if (ePct == null || ePct > swingPct) return;
+    const newWinner = computeNewWinner(t, fromVal, toVal, swingPct) || s.runner_party;
+    flipping.push({ ...s, _ePct: ePct, _newWinner: newWinner });
   });
 
   // Compute projected seat counts at party level, then aggregate for display
@@ -1009,7 +1104,7 @@ function onSwing() {
   partyData.forEach(p => { newPartyCount[p.party] = p.seats_won; });
   flipping.forEach(s => {
     if (newPartyCount[s.winner_party] != null) newPartyCount[s.winner_party]--;
-    newPartyCount[s.runner_party] = (newPartyCount[s.runner_party] || 0) + 1;
+    newPartyCount[s._newWinner] = (newPartyCount[s._newWinner] || 0) + 1;
   });
 
   const displayData = getDisplayPartyData();
@@ -1025,7 +1120,7 @@ function onSwing() {
   const gains = {}, losses = {};
   flipping.forEach(s => {
     const wp = allianceMode ? getAlliance(s.winner_party) : s.winner_party;
-    const rp = allianceMode ? getAlliance(s.runner_party) : s.runner_party;
+    const rp = allianceMode ? getAlliance(s._newWinner)   : s._newWinner;
     losses[wp] = (losses[wp] || 0) + 1;
     gains[rp]  = (gains[rp]  || 0) + 1;
   });
@@ -1091,21 +1186,25 @@ function onSwing() {
   } else {
     flipEmpty.style.display = 'none';
     flipWrap.style.display  = 'block';
-    document.getElementById('flip-tbody').innerHTML = flipping.map(s => `
+    document.getElementById('flip-tbody').innerHTML = flipping.map(s => {
+      const t   = top4Map[s.const_no];
+      const nwd = t ? partyDetailsInConstituency(s._newWinner, t) : { color:'#94A3B8', short: s._newWinner, candidate:'—', votes: null, pct: null };
+      return `
       <tr>
         <td><strong>${s.constituency}</strong></td>
         <td>${badge(s.winner_party, resolveColor(s.winner_party, s.winner_color), resolveShort(s.winner_party, s.winner_short))}
             <span style="font-size:.75rem;color:#64748B;margin-left:4px">${s.winner}</span></td>
         <td class="arrow-cell">&#8594;</td>
-        <td>${badge(s.runner_party, resolveColor(s.runner_party, s.runner_color), resolveShort(s.runner_party, s.runner_short))}
-            <span style="font-size:.75rem;color:#64748B;margin-left:4px">${s.runner_up}</span></td>
+        <td>${badge(s._newWinner, resolveColor(s._newWinner, nwd.color), resolveShort(s._newWinner, nwd.short))}
+            <span style="font-size:.75rem;color:#64748B;margin-left:4px">${nwd.candidate}</span></td>
         <td class="right" style="color:#64748B">${fmt(s.margin)}</td>
-        <td class="right ${swingColorClass(s.swing_pct)}">${fmtP(s.swing_pct)}</td>
+        <td class="right ${swingColorClass(s._ePct)}">${fmtP(s._ePct)}</td>
         <td class="right">${fmt(s.winner_votes)}
             <span style="color:#94A3B8;font-size:.72rem">&nbsp;${s.winner_pct != null ? '(' + s.winner_pct.toFixed(1) + '%)' : ''}</span></td>
-        <td class="right">${fmt(s.runner_votes)}
-            <span style="color:#94A3B8;font-size:.72rem">&nbsp;${s.runner_pct != null ? '(' + s.runner_pct.toFixed(1) + '%)' : ''}</span></td>
-      </tr>`).join('');
+        <td class="right">${fmt(nwd.votes)}
+            <span style="color:#94A3B8;font-size:.72rem">&nbsp;${nwd.pct != null ? '(' + nwd.pct.toFixed(1) + '%)' : ''}</span></td>
+      </tr>`;
+    }).join('');
   }
 }
 
