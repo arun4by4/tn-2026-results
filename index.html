@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -503,12 +503,34 @@ function swingColorClass(pct) {
 // ══════════════════════════════════════════════
 // Tab switching
 // ══════════════════════════════════════════════
-function switchTab(id, btn) {
+function switchTab(id, btn, updateHash = true) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
-  btn.classList.add('active');
+  
+  if (!btn) {
+    btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes("'" + id + "'"));
+  }
+  if (btn) btn.classList.add('active');
+
+  if (updateHash && window.location.hash !== '#' + id) {
+    window.location.hash = id;
+  }
 }
+
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash.replace('#', '');
+  if (['overview', 'constituencies', 'swing'].includes(hash)) {
+    switchTab(hash, null, false);
+  }
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const hash = window.location.hash.replace('#', '');
+  if (['overview', 'constituencies', 'swing'].includes(hash)) {
+    switchTab(hash, null, false);
+  }
+});
 
 // ══════════════════════════════════════════════
 // Data loading
@@ -1127,7 +1149,7 @@ function toggleAlliance() {
 
 // Apply saved preferences (runs before loadAll)
 (function initPrefs() {
-  const savedTheme = localStorage.getItem('tn-theme') || 'dark';
+  const savedTheme = localStorage.getItem('tn-theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
   document.getElementById('theme-btn').textContent = savedTheme === 'dark' ? '☀ Light' : '☾ Dark';
   applyChartTheme(savedTheme === 'dark');
