@@ -787,22 +787,22 @@ function renderConst() {
       <td style="color:#94A3B8;font-size:.75rem">${r.const_no}</td>
       <td><strong>${r.constituency}</strong></td>
       <td style="white-space:nowrap">
-        <span style="font-size:.8rem">${r.p1_candidate || '—'}</span>
-        ${r.p1_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p1_pct.toFixed(1)}%</span>` : ''}
+        <div style="font-size:.8rem">${r.p1_candidate || '—'}</div>
+        ${r.p1_pct != null ? `<div style="font-size:.72rem;color:#64748B">${r.p1_pct.toFixed(1)}%${r.p1_votes != null ? ` · ${fmt(r.p1_votes)}` : ''}</div>` : ''}
       </td>
       <td>${badge(r.p1_party, resolveColor(r.p1_party, r.p1_color), resolveShort(r.p1_party, r.p1_short))}</td>
       <td style="white-space:nowrap">
-        <span style="font-size:.8rem;color:#64748B">${r.p2_candidate || '—'}</span>
-        ${r.p2_pct != null ? `<span style="font-size:.72rem;color:#94A3B8;margin-left:4px">${r.p2_pct.toFixed(1)}%</span>` : ''}
+        <div style="font-size:.8rem;color:#64748B">${r.p2_candidate || '—'}</div>
+        ${r.p2_pct != null ? `<div style="font-size:.72rem;color:#94A3B8">${r.p2_pct.toFixed(1)}%${r.p2_votes != null ? ` · ${fmt(r.p2_votes)}` : ''}</div>` : ''}
       </td>
       <td>${r.p2_party ? badge(r.p2_party, resolveColor(r.p2_party, r.p2_color), resolveShort(r.p2_party, r.p2_short)) : '—'}</td>
       <td style="white-space:nowrap">
         ${r.p3_party ? badge(r.p3_party, resolveColor(r.p3_party, r.p3_color), resolveShort(r.p3_party, r.p3_short)) : '—'}
-        ${r.p3_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p3_pct.toFixed(1)}%</span>` : ''}
+        ${r.p3_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p3_pct.toFixed(1)}%${r.p3_votes != null ? ` · ${fmt(r.p3_votes)}` : ''}</span>` : ''}
       </td>
       <td style="white-space:nowrap">
         ${r.p4_party ? badge(r.p4_party, resolveColor(r.p4_party, r.p4_color), resolveShort(r.p4_party, r.p4_short)) : '—'}
-        ${r.p4_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p4_pct.toFixed(1)}%</span>` : ''}
+        ${r.p4_pct != null ? `<span style="font-size:.72rem;color:#64748B;margin-left:4px">${r.p4_pct.toFixed(1)}%${r.p4_votes != null ? ` · ${fmt(r.p4_votes)}` : ''}</span>` : ''}
       </td>
       <td class="right" style="font-weight:600">${fmt(r.margin)}</td>
       <td class="right ${sc}">${fmtP(r.swing_pct)}</td>
@@ -853,12 +853,13 @@ function renderConst() {
       const color = resolveColor(party, r[`p${p}_color`]);
       const short = resolveShort(party, r[`p${p}_short`]);
       const pct   = r[`p${p}_pct`];
+      const votes = r[`p${p}_votes`];
       return `
       <div class="mob-cand">
         <span class="mob-pos">${POS_LABELS[p-1]}</span>
         <span class="badge" style="background:${color};flex-shrink:0">${short}</span>
         <span class="mob-name${p > 1 ? ' dim' : ''}">${cand || ''}</span>
-        <span class="mob-pct" style="color:${color}">${pct != null ? pct.toFixed(1)+'%' : ''}</span>
+        <span class="mob-pct" style="color:${color}">${pct != null ? pct.toFixed(1)+'%' : ''}${votes != null ? `<span style="font-size:.65rem;color:var(--text-f);margin-left:4px">${fmt(votes)}</span>` : ''}</span>
       </div>`;
     }).join('');
     return `
