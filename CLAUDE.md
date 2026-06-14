@@ -67,7 +67,7 @@ venv/Scripts/python convert_to_json.py
 
 ## Static Web UI (index.html)
 
-Pure static HTML/CSS/JS — works on GitHub Pages with no build step.
+Pure static HTML/CSS/JS — no build step.
 
 **Tabs:**
 - **Overview** — 4 metric cards, seats-won horizontal bar chart, vote-share doughnut, full party performance table with 1st/2nd/3rd/4th place counts, total votes, and inline vote-share bar
@@ -104,17 +104,6 @@ Pure static HTML/CSS/JS — works on GitHub Pages with no build step.
 - Seat counts, the projected bar chart, seat-change chips, majority indicator, and flip table all use the actual new winner (not always runner_party)
 - In **alliance mode**, `resolveToParty()` maps each alliance to its highest-placed member party in the constituency before applying the same formula
 - Helper functions: `buildTop4Map()` (indexes top4Data by const_no at init), `resolveToParty()`, `computeFlipPct()`, `computeNewWinner()`, `partyDetailsInConstituency()`; `top4Map` global holds the indexed data
-
-**GitHub Actions deployment** (`.github/workflows/deploy.yml`):
-- Triggers on push to `main` or manual `workflow_dispatch`
-- Manual trigger has a `refetch` boolean: if true, runs all three Python scripts (full re-scrape, ~5 min); if false (default), only runs `convert_to_json.py` from committed CSVs
-- Deploys via `actions/deploy-pages@v4` — Pages source must be set to **GitHub Actions** in repo settings (Settings → Pages → Source: GitHub Actions)
-
-**To deploy to GitHub Pages:**
-1. Enable Pages: Settings → Pages → Source: **GitHub Actions**
-2. Commit everything including `data/` and CSVs (`venv/` is gitignored)
-3. Push to `main` — the workflow runs automatically
-4. Site available at `https://<user>.github.io/<repo>/`
 
 **To preview locally** (`fetch()` requires HTTP, not `file://`):
 ```
